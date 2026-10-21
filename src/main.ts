@@ -1,0 +1,22 @@
+import { createApp } from 'vue';
+import { ElButton, ElCheckbox, ElCheckboxGroup, ElDialog, ElSwitch, ElTooltip } from 'element-plus';
+import 'element-plus/theme-chalk/base.css';
+import 'element-plus/es/components/button/style/css';
+import 'element-plus/es/components/checkbox/style/css';
+import 'element-plus/es/components/checkbox-group/style/css';
+import 'element-plus/es/components/dialog/style/css';
+import 'element-plus/es/components/switch/style/css';
+import 'element-plus/es/components/tooltip/style/css';
+import 'element-plus/es/components/message/style/css';
+import '@fontsource/instrument-sans/400.css';
+import '@fontsource/instrument-sans/500.css';
+import '@fontsource/instrument-sans/600.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import 'remixicon/fonts/remixicon.css';
+import './styles/main.css';
+import App from './App.vue';
+
+const app = createApp(App);
+[ElButton, ElCheckbox, ElCheckboxGroup, ElDialog, ElSwitch, ElTooltip].forEach((c) => app.use(c));
+app.mount('#app');
