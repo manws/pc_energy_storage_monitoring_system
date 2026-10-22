@@ -10,14 +10,15 @@ const { state } = useEnergy();
 const VW = 1000;
 const VH = 300;
 const BUS_X = 400;
+const GRID_Y = 150;
+const BRANCH_Y = [42, 114, 186, 258];
 
 interface Branch { id: PowerKey; name: string; color: string; icon: string; device: string; y: number }
 
 const grid = METERS[0];
-const branches: Branch[] = [
-  ...METERS.slice(1).map((m, i) => ({ id: m.id, name: m.name, color: m.color, icon: m.icon, device: m.device, y: 36 + i * 50 })),
-  { id: 'base', name: '厂区负载(计算)', color: '#6a7b73', icon: 'ri-home-gear-line', device: '照明/空调/动力', y: 236 }
-];
+const branches: Branch[] = METERS.slice(1).map((m, i) => ({
+  id: m.id, name: m.name, color: m.color, icon: m.icon, device: m.device, y: BRANCH_Y[i]
+}));
 
 const pos = (x: number, y: number) => ({ left: `${(x / VW) * 100}%`, top: `${(y / VH) * 100}%` });
 
@@ -41,9 +42,9 @@ const view = computed(() => {
     gridColor: alarm ? '#dc2626' : grid.color,
     branches: branches.map((b) => {
       const p = s.power[b.id];
-      let status = '常规用电负载';
-      if (b.id === 'ess') status = `SOC ${fmt(s.bms.soc, 1)}% · ${p > 0.5 ? '充电' : p < -0.5 ? '放电' : '静置'}`;
-      else if (b.id === 'cab1' || b.id === 'cab2' || b.id === 'cab3') status = PHASE_TEXT[s.cabPhase[b.id]];
+      const status = b.id === 'ess'
+        ? (p > 0.5 ? '充电' : p < -0.5 ? '放电' : s.essStep === 4 ? '停机' : '静置')
+        : PHASE_TEXT[s.cabPhase[b.id as 'cab1' | 'cab2' | 'cab3']];
       return { ...b, p, status };
     })
   };
@@ -67,21 +68,21 @@ const view = computed(() => {
               <stop offset="1" stop-color="#0b8456" />
             </linearGradient>
           </defs>
-          <path :d="`M80 150 H${BUS_X}`" stroke="rgba(90,196,255,.35)" stroke-width="4" fill="none" />
-          <path :d="`M80 150 H${BUS_X}`" class="flow" fill="none" :style="flowStyle(view.gridP, view.gridColor)" />
+          <path :d="`M80 ${GRID_Y} H${BUS_X}`" stroke="rgba(90,196,255,.35)" stroke-width="4" fill="none" />
+          <path :d="`M80 ${GRID_Y} H${BUS_X}`" class="flow" fill="none" :style="flowStyle(view.gridP, view.gridColor)" />
           <g v-for="b in view.branches" :key="b.id">
-            <path :d="`M${BUS_X} ${b.y} H860`" stroke="rgba(90,196,255,.35)" stroke-width="4" fill="none" />
-            <path :d="`M${BUS_X} ${b.y} H860`" class="flow" fill="none" :style="flowStyle(b.p, b.color)" />
+            <path :d="`M${BUS_X} ${b.y} H800`" stroke="rgba(90,196,255,.35)" stroke-width="4" fill="none" />
+            <path :d="`M${BUS_X} ${b.y} H800`" class="flow" fill="none" :style="flowStyle(b.p, b.color)" />
           </g>
-          <line :x1="BUS_X" y1="24" :x2="BUS_X" y2="252" stroke="url(#bus-g)" stroke-width="8" stroke-linecap="round" />
+          <line :x1="BUS_X" y1="28" :x2="BUS_X" y2="272" stroke="url(#bus-g)" stroke-width="8" stroke-linecap="round" />
         </svg>
 
-        <div class="node" :style="pos(56, 150)">
+        <div class="node" :style="pos(56, GRID_Y)">
           <div class="src" :class="{ 'is-alarm': view.alarm }"><i class="ri-government-line" /></div>
           <div class="text-[12px] text-slate-300 mt-1 text-center">市电电网</div>
         </div>
 
-        <div class="node" :style="pos(240, 150)">
+        <div class="node" :style="pos(240, GRID_Y)">
           <div class="gm" :class="{ 'is-alarm': view.alarm }">
             <div class="text-[12px] text-slate-300"><i class="ri-dashboard-3-line text-cyan-300" /> 市电电表</div>
             <div class="num text-[24px] leading-7" :style="{ color: view.gridColor }">{{ fmt(view.gridP, 1) }}<span class="text-[12px] text-slate-400 ml-1">kW</span></div>
@@ -89,20 +90,16 @@ const view = computed(() => {
           </div>
         </div>
 
-        <div class="node !-translate-x-0" :style="pos(BUS_X + 14, 268)">
-          <span class="text-[11px] text-slate-400 whitespace-nowrap">0.4kV 低压母线</span>
-        </div>
-
         <template v-for="b in view.branches" :key="b.id">
-          <div class="node" :style="pos(600, b.y)">
+          <div class="node" :style="pos(590, b.y)">
             <div class="bm" :style="{ '--bc': `${b.color}55` }">
-              <i :class="b.id === 'base' ? 'ri-calculator-line' : 'ri-dashboard-3-line'" :style="{ color: b.color }" />
+              <i class="ri-dashboard-3-line" :style="{ color: b.color }" />
               <span class="text-[12px] text-slate-300">{{ b.name }}</span>
               <span class="num text-[17px] w-[64px] text-right" :style="{ color: b.color }">{{ fmt(b.p, 1) }}</span>
               <span class="text-[10px] text-slate-500">kW</span>
             </div>
           </div>
-          <div class="node" :style="pos(900, b.y)">
+          <div class="node" :style="pos(880, b.y)">
             <div class="dev" :style="{ '--bc': `${b.color}33` }">
               <i :class="b.icon" class="text-[18px]" :style="{ color: b.color }" />
               <div class="leading-4">
@@ -172,6 +169,7 @@ svg line {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 214px;
   padding: 4px 12px;
   white-space: nowrap;
   border-radius: 8px;

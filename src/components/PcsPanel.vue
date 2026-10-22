@@ -17,7 +17,8 @@ const channels = computed(() => state.value.pcs.map((ch) => {
     voltage: ch.voltage,
     current: ch.current,
     height: Math.min(100, (Math.abs(power) / RANGE) * 100),
-    up: power >= 0
+    up: power >= 0,
+    modeCls: ch.mode.includes('放电') ? 'dis' : ch.mode.includes('充电') ? 'chg' : ch.mode.includes('限功率') ? 'limit' : 'rest'
   };
 }));
 
@@ -38,7 +39,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障
             <span>kW</span>
           </div>
           <div class="meta">{{ fmt(ch.voltage, 1) }} V · {{ fmt(ch.current, 1) }} A</div>
-          <div class="mode">{{ ch.mode }}</div>
+          <div class="mode" :class="ch.modeCls">{{ ch.mode }}</div>
         </div>
         <div class="gauge">
           <span>300</span>
@@ -80,8 +81,21 @@ const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障
 .st.bad, .bad { color: #ff8a8a; }
 .power { margin-top: 8px; }
 .power .num { font-size: 28px; line-height: 1; }
-.meta, .mode { color: #7eb4cc; font-size: 12px; }
-.mode { margin-top: auto; }
+.meta { margin-top: 4px; color: #7eb4cc; font-size: 12px; }
+.mode {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 3px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.mode.chg { color: #7dffc3; }
+.mode.dis { color: #8aecff; }
+.mode.limit { color: #ffd27a; }
+.mode.rest { color: #d5e8f2; }
 
 .gauge {
   width: 36px;

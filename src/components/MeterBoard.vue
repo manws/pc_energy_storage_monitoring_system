@@ -81,14 +81,16 @@ const view = computed(() => {
           @click="emit('update:selected', r.id)"
         >
           <i :class="r.icon" />
-          <div class="min-w-0">
-            <div class="text-[14px] text-slate-100 leading-5 truncate">{{ r.name }}</div>
-            <div class="text-[11px] text-slate-500 truncate">{{ r.device }}</div>
+          <div class="name">
+            <div class="text-[13px] text-slate-100 leading-4">{{ r.name }}</div>
+            <div class="text-[11px] text-slate-500 leading-4">{{ r.device }}</div>
           </div>
-          <div class="ml-auto text-right">
-            <span class="num text-[18px]" :style="{ color: r.alarm ? '#ff6b6b' : r.color }">{{ fmt(r.ps, 2) }}</span>
-            <span class="text-[11px] text-slate-500 ml-0.5">kW</span>
-            <div class="text-[11px]" :class="r.dir.cls">{{ r.dir.text }}</div>
+          <div class="val">
+            <div>
+              <span class="num text-[16px]" :style="{ color: r.alarm ? '#ff6b6b' : r.color }">{{ fmt(r.ps, 1) }}</span>
+              <span class="text-[11px] text-slate-500 ml-0.5">kW</span>
+            </div>
+            <div class="text-[11px] leading-4" :class="r.dir.cls">{{ r.dir.text }}</div>
           </div>
         </li>
       </ul>
@@ -98,7 +100,7 @@ const view = computed(() => {
           <div>
             <div class="label">{{ meta.name }} · 总有功功率 Ps</div>
             <div class="leading-none mt-1">
-              <span class="num text-[32px]" :style="{ color: view.alarm ? '#ff6b6b' : meta.color }">{{ fmt(view.e.ps, 2) }}</span>
+              <span class="num text-[26px]" :style="{ color: view.alarm ? '#ff6b6b' : meta.color }">{{ fmt(view.e.ps, 2) }}</span>
               <span class="text-[12px] text-slate-400 ml-1">kW</span>
             </div>
           </div>
@@ -107,6 +109,7 @@ const view = computed(() => {
             <span class="label">电流不平衡</span><span class="num text-slate-100">{{ fmt(view.unbalance, 1) }}%</span>
           </div>
         </div>
+        <div class="tbl-box">
         <table class="tbl">
           <thead>
             <tr>
@@ -129,6 +132,7 @@ const view = computed(() => {
             </tr>
           </tbody>
         </table>
+        </div>
         <div class="lines">
           <div v-for="l in view.lines" :key="l.label" class="cell">
             <div class="label">{{ l.label }}</div>
@@ -151,22 +155,27 @@ const view = computed(() => {
 .list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
-  padding: 8px;
+  padding: 6px 8px;
   list-style: none;
+  flex: 0 0 auto;
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 4px 10px;
+  gap: 6px;
+  min-height: 34px;
+  padding: 3px 8px;
   cursor: pointer;
   border: 1px solid transparent;
   background: rgba(8, 36, 64, 0.55);
 }
+
+.name { flex: 1; min-width: 0; }
+.name div { white-space: nowrap; }
+.val { flex: 0 0 auto; text-align: right; }
 
 .row.is-on {
   border-color: var(--c);
@@ -176,20 +185,32 @@ const view = computed(() => {
 .detail {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 4px 12px 12px;
+  gap: 8px;
+  padding: 10px 10px 8px;
   border-top: 1px solid rgba(90, 196, 255, 0.18);
 }
 
 .hero, .facts, .lines { display: flex; }
-.hero { justify-content: space-between; gap: 12px; align-items: flex-end; }
+.hero { justify-content: space-between; gap: 12px; align-items: flex-end; flex: 0 0 auto; }
 .facts { display: grid; grid-template-columns: auto auto; gap: 4px 12px; font-size: 12px; align-content: end; }
-.tbl { width: 100%; font-size: 13px; }
-.tbl th, .tbl td { padding: 6px 4px; text-align: right; }
+.tbl-box { flex: 1; min-height: 0; }
+.tbl {
+  width: 100%;
+  height: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+.tbl th, .tbl td { padding: 0 4px; text-align: right; }
 .tbl th:first-child, .tbl td:first-child { text-align: left; color: #7eb4cc; }
-.lines { gap: 8px; }
-.cell { flex: 1; text-align: center; padding: 6px 0; }
+.lines { gap: 8px; flex: 0 0 auto; }
+.cell {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 6px 0;
+  background: rgba(8, 36, 64, 0.55);
+}
 </style>
