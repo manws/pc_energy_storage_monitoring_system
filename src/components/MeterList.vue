@@ -68,12 +68,13 @@ const rows = computed(() => {
   padding: 0 12px;
   cursor: pointer;
   border-radius: 8px;
-  background: #f6f4ef;
+  background: rgba(8, 36, 64, 0.55);
+  border: 1px solid transparent;
   transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease), transform 0.4s var(--ease);
 }
 
 .row:hover {
-  background: #efece6;
+  background: rgba(16, 56, 92, 0.7);
 }
 
 .row:active {
@@ -81,7 +82,7 @@ const rows = computed(() => {
 }
 
 .row.is-active {
-  background: #fbfaf7;
+  background: rgba(12, 48, 86, 0.85);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent);
 }
 
@@ -97,7 +98,7 @@ const rows = computed(() => {
 }
 
 .row.is-alarm {
-  background: #fff1f1;
+  background: rgba(80, 16, 20, 0.55);
 }
 
 .icon {
@@ -108,6 +109,6 @@ const rows = computed(() => {
   font-size: 17px;
   color: var(--c);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--c) 12%, #fff);
+  background: color-mix(in srgb, var(--c) 18%, #07182c);
 }
 </style>

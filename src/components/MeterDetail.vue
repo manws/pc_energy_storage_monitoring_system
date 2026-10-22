@@ -124,12 +124,12 @@ const view = computed(() => {
   justify-content: space-between;
   padding: 12px 16px;
   border-radius: 10px;
-  background: #f6f4ef;
+  background: rgba(8, 36, 64, 0.65);
   box-shadow: inset 0 0 0 1px var(--c-line);
 }
 
 .hero.is-alarm {
-  background: radial-gradient(120% 160% at 0% 0%, rgba(220, 38, 38, 0.14), transparent 60%), #fff5f5;
+  background: radial-gradient(120% 160% at 0% 0%, rgba(220, 38, 38, 0.28), transparent 60%), rgba(40, 8, 12, 0.8);
   box-shadow: inset 0 0 0 1.5px rgba(220, 38, 38, 0.55);
 }
 
@@ -138,15 +138,15 @@ const view = computed(() => {
   font-size: 12px;
   padding: 4px 6px;
   text-align: right;
-  border-bottom: 1px solid rgba(16, 90, 60, 0.1);
+  border-bottom: 1px solid rgba(90, 196, 255, 0.18);
 }
 
 .tbl td {
   padding: 4px 6px;
   text-align: right;
-  color: #14261f;
+  color: #e7f6ff;
   font-size: 16px;
-  border-bottom: 1px dashed rgba(16, 90, 60, 0.08);
+  border-bottom: 1px dashed rgba(90, 196, 255, 0.16);
 }
 
 .tbl td:first-child,
@@ -166,7 +166,7 @@ const view = computed(() => {
   height: 4px;
   margin-top: 3px;
   border-radius: 4px;
-  background: #e9f0ec;
+  background: rgba(90, 196, 255, 0.12);
   overflow: hidden;
 }
 

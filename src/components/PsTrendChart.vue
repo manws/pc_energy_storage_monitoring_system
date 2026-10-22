@@ -31,29 +31,29 @@ const chart = useChart(el, (c) => {
     legend: { show: false, data: METERS.map((m) => m.short) },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255,255,255,.96)',
-      borderColor: 'rgba(16,163,107,.18)',
+      backgroundColor: 'rgba(6, 24, 44, .94)',
+      borderColor: 'rgba(90,196,255,.35)',
       padding: [8, 12],
-      textStyle: { color: '#22352d', fontSize: 12 },
-      extraCssText: 'border-radius:12px;box-shadow:0 16px 36px -14px rgba(20,90,60,.35);',
-      axisPointer: { type: 'line', lineStyle: { color: 'rgba(16,163,107,.45)', type: 'dashed' } },
+      textStyle: { color: '#c5e6f5', fontSize: 12 },
+      extraCssText: 'border-radius:4px;box-shadow:0 0 18px rgba(16,110,200,.35);',
+      axisPointer: { type: 'line', lineStyle: { color: 'rgba(58,212,255,.55)', type: 'dashed' } },
       formatter: (raw: unknown) => {
         const items = Array.isArray(raw) ? (raw as { value: [number, number]; marker: string; seriesName: string }[]) : [];
         if (!items.length) return '';
-        const head = `<div style="color:#8b9a93;margin-bottom:4px">${fmtTime(items[0].value[0])}</div>`;
+        const head = `<div style="color:#7eb4cc;margin-bottom:4px">${fmtTime(items[0].value[0])}</div>`;
         return head + items.map((it) => {
           const v = it.value[1];
           const warn = it.seriesName === '市电' && v < 0;
-          return `<div style="display:flex;justify-content:space-between;gap:20px">${it.marker}${it.seriesName}<b style="color:${warn ? '#dc2626' : '#14261f'}">${fmt(v, 2)} kW</b></div>`;
+          return `<div style="display:flex;justify-content:space-between;gap:20px">${it.marker}${it.seriesName}<b style="color:${warn ? '#ff8a8a' : '#e7f6ff'}">${fmt(v, 2)} kW</b></div>`;
         }).join('');
       }
     },
     xAxis: {
       type: 'time',
-      axisLine: { lineStyle: { color: 'rgba(16,90,60,.15)' } },
+      axisLine: { lineStyle: { color: 'rgba(90,196,255,.25)' } },
       axisTick: { show: false },
       axisLabel: {
-        color: '#8b9a93',
+        color: '#7eb4cc',
         fontSize: 11,
         formatter: (v: number) => {
           const d = new Date(v);
@@ -64,8 +64,8 @@ const chart = useChart(el, (c) => {
     },
     yAxis: {
       type: 'value',
-      axisLabel: { color: '#8b9a93', fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(16,90,60,.06)', type: 'dashed' } }
+      axisLabel: { color: '#7eb4cc', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(90,196,255,.12)', type: 'dashed' } }
     },
     series: METERS.map((m, i) => ({
       name: m.short,
@@ -167,7 +167,7 @@ const legend = computed(() => METERS.map((m) => {
   padding: 3px 12px;
   font-size: 12px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--c) 8%, #fff);
+  background: color-mix(in srgb, var(--c) 14%, #07182c);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
   transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
 }

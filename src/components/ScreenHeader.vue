@@ -83,9 +83,10 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   display: grid;
   place-items: center;
   font-size: 18px;
-  color: #fbfaf7;
-  border-radius: 8px;
-  background: #0c6b52;
+  color: #e7f6ff;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #1aa8e6, #0a4e8a);
+  box-shadow: 0 0 14px rgba(58, 180, 255, 0.55);
 }
 
 .stat {
@@ -102,9 +103,11 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   gap: 14px;
   padding: 0 14px;
   font-size: 13px;
-  border-radius: 8px;
-  background: var(--c-card);
-  box-shadow: inset 0 0 0 1px var(--c-line);
+  border-radius: 2px;
+  color: #c5e6f5;
+  background: rgba(6, 28, 52, 0.72);
+  border: 1px solid rgba(90, 196, 255, 0.35);
+  box-shadow: inset 0 0 12px rgba(40, 140, 220, 0.12);
 }
 
 .sep {
@@ -118,7 +121,8 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #0c6b52;
+  background: #2ee59a;
+  box-shadow: 0 0 8px rgba(46, 229, 154, 0.8);
 }
 
 .dot::after {
@@ -127,7 +131,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   inset: -4px;
   border-radius: 50%;
   background: currentColor;
-  color: rgba(12, 107, 82, 0.35);
+  color: rgba(46, 229, 154, 0.45);
   animation: blink-soft 1.8s var(--ease) infinite;
 }
 
@@ -156,28 +160,33 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   font-weight: 500;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: #0c6b52;
+  color: #7ee7ff;
 }
 
 .eyebrow::before,
 .eyebrow::after {
   content: '';
   display: inline-block;
-  width: 18px;
+  width: 36px;
   height: 1px;
-  margin: 0 8px 3px;
-  background: rgba(12, 107, 82, 0.45);
+  margin: 0 10px 3px;
+  background: linear-gradient(90deg, transparent, #3ad4ff);
   vertical-align: middle;
+}
+
+.eyebrow::after {
+  background: linear-gradient(90deg, #3ad4ff, transparent);
 }
 
 .title h1 {
   margin: 0;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 600;
   line-height: 1.15;
-  letter-spacing: 0.22em;
-  padding-left: 0.22em;
-  color: #1a211e;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+  color: #f4fbff;
+  text-shadow: 0 0 18px rgba(80, 200, 255, 0.65);
 }
 
 .hbtn {
@@ -187,17 +196,19 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   gap: 8px;
   padding: 0 12px;
   font-size: 13px;
-  color: #3c4742;
-  border-radius: 8px;
-  background: var(--c-card);
-  box-shadow: inset 0 0 0 1px var(--c-line);
+  color: #c5e6f5;
+  border-radius: 2px;
+  background: rgba(6, 28, 52, 0.72);
+  border: 1px solid rgba(90, 196, 255, 0.35);
+  box-shadow: inset 0 0 12px rgba(40, 140, 220, 0.12);
   cursor: pointer;
-  transition: background 0.25s var(--ease), color 0.25s;
+  transition: background 0.25s var(--ease), color 0.25s, border-color 0.25s;
 }
 
 .hbtn:hover {
-  background: #fff;
-  color: #0c6b52;
+  background: rgba(20, 70, 110, 0.8);
+  color: #e7f6ff;
+  border-color: #7ee7ff;
 }
 
 .hbtn:active {
@@ -206,11 +217,11 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
 
 .hbtn.is-warn {
   padding-left: 5px;
-  color: #b45309;
+  color: #f5c15a;
 }
 
 .hbtn.is-warn:hover {
-  background: #fff7ea;
+  background: rgba(80, 50, 10, 0.45);
 }
 
 .ico {
@@ -219,7 +230,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   display: grid;
   place-items: center;
   border-radius: 6px;
-  background: #f6efe2;
+  background: rgba(245, 193, 90, 0.16);
   transition: transform 0.4s var(--ease);
 }
 

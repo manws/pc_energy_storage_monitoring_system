@@ -37,32 +37,32 @@ const kpis = computed<Kpi[]>(() => {
   const essTxt = P.ess > 0.5 ? '充电中' : P.ess < -0.5 ? '放电中' : '静置';
   return [
     {
-      id: 'grid', label: '市电总有功功率', icon: 'ri-flashlight-fill', unit: 'kW', color: bf ? '#e03b3b' : '#10a36b',
+      id: 'grid', label: '市电总有功功率', icon: 'ri-flashlight-fill', unit: 'kW', color: bf ? '#ff6b6b' : '#2ee59a',
       value: P.grid, decimals: 2, trend: downsample(tail(h.grid), 50), zero: true, alarm: bf,
       sub: bf ? '逆流告警 · 请立即处理' : P.grid < SAFE_MARGIN ? `临界 · 裕量 ${fmt(P.grid, 1)} kW` : `防逆流正常 · 裕量 ${fmt(P.grid, 1)} kW`,
       subCls: bf ? 'text-red-400' : P.grid < SAFE_MARGIN ? 'text-amber-400' : 'text-emerald-400'
     },
     {
-      id: 'ess', label: '储能运行功率', icon: 'ri-battery-2-charge-fill', unit: 'kW', color: '#2a9d8f',
+      id: 'ess', label: '储能运行功率', icon: 'ri-battery-2-charge-fill', unit: 'kW', color: '#3ad4ff',
       value: P.ess, decimals: 2, trend: downsample(tail(h.ess), 50),
       sub: s.essLimited ? `${essTxt} · 防逆流限功率` : essTxt, subCls: s.essLimited ? 'text-amber-400' : 'text-slate-400'
     },
     {
-      id: 'test', label: '测试柜总功率', icon: 'ri-server-fill', unit: 'kW', color: '#8bbf3f',
+      id: 'test', label: '测试柜总功率', icon: 'ri-server-fill', unit: 'kW', color: '#8ef06a',
       value: P.cab1 + P.cab2 + P.cab3, decimals: 2, trend: downsample(testTrend, 50),
       sub: `运行 ${running}/3 台 · 厂区负载 ${fmt(P.base, 1)} kW`
     },
     {
-      id: 'soc', label: '储能电池 SOC', icon: 'ri-battery-saver-fill', unit: '%', color: '#5f8fb8',
+      id: 'soc', label: '储能电池 SOC', icon: 'ri-battery-saver-fill', unit: '%', color: '#7eb6ff',
       value: s.bms.soc, decimals: 1, trend: downsample(s.socHistory, 50),
       sub: `可用 ≈ ${fmt((s.bms.soc / 100) * ESS_CAPACITY, 1)} / ${ESS_CAPACITY} kWh`
     },
     {
-      id: 'energy', label: '今日市电用电量', icon: 'ri-bar-chart-box-fill', unit: 'kWh', color: '#5f8fb8',
+      id: 'energy', label: '今日市电用电量', icon: 'ri-bar-chart-box-fill', unit: 'kWh', color: '#7ee7ff',
       value: s.energy.grid.imp, decimals: 1, sub: `反送电量 ${fmt(s.energy.grid.exp, 2)} kWh`
     },
     {
-      id: 'alarm', label: '今日告警次数', icon: 'ri-alarm-warning-fill', unit: '次', color: '#d9a441',
+      id: 'alarm', label: '今日告警次数', icon: 'ri-alarm-warning-fill', unit: '次', color: '#f5c15a',
       value: s.alarmCountToday, decimals: 0, sub: `其中逆流 ${s.backflow.count} 次`,
       subCls: s.backflow.count ? 'text-red-400' : 'text-slate-400'
     }
@@ -79,7 +79,7 @@ const kpis = computed<Kpi[]>(() => {
         <Sparkline v-if="k.trend" :values="k.trend" :color="k.color" :width="72" :height="26" :zero="k.zero" class="ml-auto shrink-0" />
       </div>
       <div class="flex items-baseline gap-1 leading-none mt-1">
-        <AnimatedNumber :value="k.value" :decimals="k.decimals" class="text-[24px]" :style="{ color: k.alarm ? '#c03028' : '#1a211e' }" />
+        <AnimatedNumber :value="k.value" :decimals="k.decimals" class="text-[24px]" :style="{ color: k.alarm ? '#ff6b6b' : '#e7f6ff' }" />
         <span class="text-[12px] text-slate-400">{{ k.unit }}</span>
       </div>
       <div class="text-[12px] mt-1 leading-4" :class="k.subCls || 'text-slate-400'">{{ k.sub }}</div>
@@ -95,9 +95,9 @@ const kpis = computed<Kpi[]>(() => {
   align-items: stretch;
   justify-content: center;
   gap: 0;
-  border-radius: 12px;
-  background: var(--c-card);
-  border: 1px solid var(--c-line);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(12, 48, 86, 0.55), rgba(4, 18, 38, 0.82));
+  border: 1px solid rgba(90, 196, 255, 0.4);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   animation: rise-in 0.7s var(--ease) both;
@@ -120,7 +120,7 @@ const kpis = computed<Kpi[]>(() => {
 }
 
 .kpi.is-alarm {
-  background: radial-gradient(120% 140% at 0% 0%, rgba(220, 38, 38, 0.14), transparent 60%), #fff5f5;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(220, 38, 38, 0.28), transparent 60%), rgba(40, 8, 12, 0.85);
   box-shadow: inset 0 0 0 1.5px rgba(220, 38, 38, 0.6), 0 12px 30px -14px rgba(220, 38, 38, 0.45);
 }
 
@@ -143,6 +143,6 @@ const kpis = computed<Kpi[]>(() => {
   font-size: 15px;
   color: var(--c);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--c) 10%, #fbfaf7);
+  background: color-mix(in srgb, var(--c) 16%, #07182c);
 }
 </style>

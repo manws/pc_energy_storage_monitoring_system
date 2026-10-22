@@ -70,10 +70,10 @@ const view = computed(() => {
               </linearGradient>
             </defs>
             <g transform="rotate(135 64 64)">
-              <circle cx="64" cy="64" :r="RING_R" fill="none" stroke="#e9f2ed" stroke-width="10" :stroke-dasharray="`${RING_C * 0.75} ${RING_C}`" stroke-linecap="round" />
+              <circle cx="64" cy="64" :r="RING_R" fill="none" stroke="rgba(90,196,255,.18)" stroke-width="10" :stroke-dasharray="`${RING_C * 0.75} ${RING_C}`" stroke-linecap="round" />
               <circle cx="64" cy="64" :r="RING_R" fill="none" stroke="url(#soc-g)" stroke-width="10" :stroke-dasharray="view.dash" stroke-linecap="round" class="ring" />
             </g>
-            <circle cx="64" cy="64" r="40" fill="none" stroke="rgba(16,90,60,.15)" stroke-dasharray="2 4" />
+            <circle cx="64" cy="64" r="40" fill="none" stroke="rgba(90,196,255,.28)" stroke-dasharray="2 4" />
           </svg>
           <div class="absolute inset-0 flex flex-col items-center justify-center">
             <div class="leading-none"><AnimatedNumber :value="view.soc" :decimals="1" class="text-[30px] text-slate-100" /><span class="text-[12px] text-slate-400">%</span></div>
@@ -140,7 +140,7 @@ const view = computed(() => {
 .pin {
   padding: 5px 10px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--c) 7%, #fff);
+  background: color-mix(in srgb, var(--c) 14%, #07182c);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 16%, transparent);
   transition: transform 0.4s var(--ease);
 }

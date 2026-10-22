@@ -102,7 +102,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障
   color: var(--c-dim);
   text-align: right;
   padding: 0 10px 6px;
-  border-bottom: 1px solid rgba(16, 90, 60, 0.08);
+  border-bottom: 1px solid rgba(90, 196, 255, 0.16);
 }
 
 .tbl td {
@@ -114,7 +114,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障
 }
 
 .tbl tbody tr:nth-child(odd) td {
-  background: #f6f4ef;
+  background: rgba(8, 36, 64, 0.45);
 }
 
 .tbl tbody tr td:first-child {
@@ -138,7 +138,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障
   color: var(--c);
   font-weight: 600;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--c) 10%, #fff);
+  background: color-mix(in srgb, var(--c) 16%, #07182c);
 }
 
 .ch::before {
@@ -157,7 +157,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障
   border-radius: 999px;
 }
 
-.st-run { color: #0b8456; background: #e3f5ec; }
-.st-idle { color: #6a7b73; background: #eef2f0; }
-.st-err { color: #dc2626; background: #fde8e8; }
+.st-run { color: #2ee59a; background: rgba(46, 229, 154, 0.14); }
+.st-idle { color: #9fd0e6; background: rgba(90, 196, 255, 0.1); }
+.st-err { color: #ff8a8a; background: rgba(220, 38, 38, 0.18); }
 </style>

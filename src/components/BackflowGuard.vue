@@ -64,7 +64,7 @@ const view = computed(() => {
         <svg viewBox="0 0 180 118" class="gauge-svg">
           <path :d="zones.red" stroke="#f3b4b4" stroke-width="5" stroke-linecap="round" fill="none" />
           <path :d="zones.amber" stroke="#f6d49a" stroke-width="5" fill="none" />
-          <path :d="zones.safe" stroke="#e3efe8" stroke-width="5" stroke-linecap="round" fill="none" />
+          <path :d="zones.safe" stroke="rgba(90,196,255,.28)" stroke-width="5" stroke-linecap="round" fill="none" />
           <path :d="view.progress" :stroke="view.level.c" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.9" />
           <g v-for="t in ticks" :key="t.v">
             <path :d="`M${t.x1} L${t.x2}`" :stroke="t.v === 0 ? '#dc2626' : '#b4c0ba'" :stroke-width="t.v === 0 ? 2 : 1" />
@@ -144,7 +144,7 @@ const view = computed(() => {
 .strategy {
   margin-top: 4px;
   font-size: 11px;
-  color: #0b8456;
+  color: #2ee59a;
 }
 
 .strategy::before {

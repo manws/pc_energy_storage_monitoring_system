@@ -10,17 +10,17 @@ export const TEMP_WARN = 32.5;
 export const SAFE_MARGIN = 15;
 
 export const METERS: MeterMeta[] = [
-  { id: 'grid', name: '市电电表', short: '市电', color: '#10a36b', icon: 'ri-government-line', device: '市电进线' },
-  { id: 'ess', name: '储能电表', short: '储能', color: '#2a9d8f', icon: 'ri-battery-2-charge-line', device: '储能充放电设备' },
-  { id: 'cab1', name: '配电柜1电表', short: '配电柜1', color: '#8bbf3f', icon: 'ri-server-line', device: '测试电池充放电' },
-  { id: 'cab2', name: '配电柜2电表', short: '配电柜2', color: '#d9a441', icon: 'ri-server-line', device: '测试电池充放电' },
-  { id: 'cab3', name: '配电柜3电表', short: '配电柜3', color: '#5f8fb8', icon: 'ri-server-line', device: '测试电池充放电' }
+  { id: 'grid', name: '市电电表', short: '市电', color: '#2ee59a', icon: 'ri-government-line', device: '市电进线' },
+  { id: 'ess', name: '储能电表', short: '储能', color: '#3ad4ff', icon: 'ri-battery-2-charge-line', device: '储能充放电设备' },
+  { id: 'cab1', name: '配电柜1电表', short: '配电柜1', color: '#8ef06a', icon: 'ri-server-line', device: '测试电池充放电' },
+  { id: 'cab2', name: '配电柜2电表', short: '配电柜2', color: '#f5c15a', icon: 'ri-server-line', device: '测试电池充放电' },
+  { id: 'cab3', name: '配电柜3电表', short: '配电柜3', color: '#7eb6ff', icon: 'ri-server-line', device: '测试电池充放电' }
 ];
 
 export const PHASES: { key: PhaseKey; name: string; color: string }[] = [
-  { key: 'a', name: 'A相', color: '#d9a441' },
-  { key: 'b', name: 'B相', color: '#10a36b' },
-  { key: 'c', name: 'C相', color: '#e04848' }
+  { key: 'a', name: 'A相', color: '#f5c15a' },
+  { key: 'b', name: 'B相', color: '#2ee59a' },
+  { key: 'c', name: 'C相', color: '#ff6b6b' }
 ];
 
 export const PHASE_TEXT: Record<CabPhase, string> = { chg: '充电测试', dis: '放电测试', rest: '静置' };

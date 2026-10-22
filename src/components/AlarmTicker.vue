@@ -85,11 +85,11 @@ const counts = computed(() => {
 }
 
 .item:hover {
-  background: #f3f8f5;
+  background: rgba(16, 56, 92, 0.55);
 }
 
 .item.is-danger {
-  background: linear-gradient(90deg, #fff0f0, transparent 75%);
+  background: linear-gradient(90deg, rgba(180, 30, 30, 0.28), transparent 75%);
 }
 
 .tag {
@@ -97,7 +97,7 @@ const counts = computed(() => {
   line-height: 18px;
   padding: 0 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, currentColor 10%, #fff);
+  background: color-mix(in srgb, currentColor 16%, #07182c);
   flex-shrink: 0;
 }
 

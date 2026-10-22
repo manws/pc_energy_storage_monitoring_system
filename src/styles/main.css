@@ -3,25 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --c-accent: #0c6b52;
-  --c-accent-soft: #1c8f6d;
-  --c-mint: #e7f3ee;
-  --c-cyan: var(--c-accent);
-  --c-line: rgba(26, 33, 30, 0.08);
-  --c-line-strong: rgba(12, 107, 82, 0.4);
-  --c-text: #1a211e;
-  --c-dim: #6e7873;
-  --c-bg: #efece6;
-  --c-card: #fbfaf7;
+  --c-accent: #3ad4ff;
+  --c-accent-soft: #7ee7ff;
+  --c-mint: rgba(58, 212, 255, 0.12);
+  --c-cyan: #3ad4ff;
+  --c-line: rgba(90, 196, 255, 0.28);
+  --c-line-strong: rgba(90, 210, 255, 0.7);
+  --c-text: #e7f6ff;
+  --c-dim: #7eb4cc;
+  --c-bg: #04101c;
+  --c-card: rgba(6, 28, 52, 0.72);
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 1px 2px rgba(26, 33, 30, 0.04), 0 16px 36px -24px rgba(26, 33, 30, 0.28);
-  --el-color-primary: #0c6b52;
-  --el-color-primary-light-3: #4d9a82;
-  --el-color-primary-light-5: #86b8a8;
-  --el-color-primary-light-7: #b7d6cb;
-  --el-color-primary-light-9: #e7f3ee;
-  --el-color-primary-dark-2: #085743;
-  --el-border-radius-base: 8px;
+  --shadow-soft: inset 0 0 24px rgba(30, 140, 220, 0.12), 0 0 16px rgba(16, 110, 200, 0.18);
+  --el-color-primary: #1aa8e6;
+  --el-color-primary-light-3: #4ec4f2;
+  --el-color-primary-light-5: #7ed6f6;
+  --el-color-primary-light-7: #16324c;
+  --el-color-primary-light-9: #0c2238;
+  --el-color-primary-dark-2: #0e7eb8;
+  --el-bg-color: #07182c;
+  --el-text-color-primary: #e7f6ff;
+  --el-border-radius-base: 4px;
 }
 
 html,
@@ -58,22 +60,23 @@ button:focus-visible {
   }
 
   .chip:hover {
-    color: #085743;
-    background: #f4f1ea;
-    border-color: rgba(12, 107, 82, 0.28);
+    color: #e7f6ff;
+    background: rgba(58, 212, 255, 0.12);
+    border-color: rgba(90, 210, 255, 0.55);
   }
 
   .chip.is-active {
-    color: #fbfaf7;
+    color: #04101c;
     font-weight: 600;
-    background: #0c6b52;
-    border-color: #0c6b52;
+    background: #3ad4ff;
+    border-color: #7ee7ff;
+    box-shadow: 0 0 10px rgba(58, 212, 255, 0.45);
   }
 
   .cell {
-    border-radius: 8px;
-    background: #f6f4ef;
-    border: 1px solid var(--c-line);
+    border-radius: 4px;
+    background: rgba(8, 36, 64, 0.72);
+    border: 1px solid rgba(90, 196, 255, 0.22);
   }
 
   .label {
@@ -86,7 +89,7 @@ button:focus-visible {
   }
 
   .thin-scroll::-webkit-scrollbar-thumb {
-    background: rgba(16, 163, 107, 0.25);
+    background: rgba(58, 212, 255, 0.35);
     border-radius: 4px;
   }
 }
@@ -111,15 +114,16 @@ button:focus-visible {
 }
 
 .el-dialog {
-  border-radius: 14px;
+  border-radius: 4px;
   padding: 20px 22px;
-  background: #fbfaf7;
-  box-shadow: 0 24px 60px -28px rgba(26, 33, 30, 0.45);
+  background: #07182c;
+  border: 1px solid rgba(90, 196, 255, 0.4);
+  box-shadow: 0 0 32px rgba(16, 110, 200, 0.28);
 }
 
 .el-dialog__title {
   font-weight: 600;
-  color: #14261f;
+  color: #e7f6ff;
   letter-spacing: 0.06em;
 }
 

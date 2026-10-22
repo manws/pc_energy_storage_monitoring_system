@@ -76,7 +76,7 @@ function draw() {
     ctx.lineWidth = 2;
     ctx.strokeRect(x - 1, y - 1, cell + 2, cell + 2);
   };
-  mark(props.maxNo, '#14261f');
+  mark(props.maxNo, '#e7f6ff');
   mark(props.minNo, '#2380c4');
 }
 
@@ -124,9 +124,9 @@ onBeforeUnmount(() => ro?.disconnect());
   white-space: nowrap;
   font-size: 13px;
   padding: 2px 10px;
-  color: #14261f;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.97);
+  color: #e7f6ff;
+  border-radius: 4px;
+  background: rgba(6, 24, 44, 0.94);
   box-shadow: 0 10px 24px -10px rgba(20, 90, 60, 0.4), inset 0 0 0 1px rgba(16, 163, 107, 0.18);
   z-index: 5;
 }

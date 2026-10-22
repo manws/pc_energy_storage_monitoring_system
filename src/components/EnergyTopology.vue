@@ -67,10 +67,10 @@ const view = computed(() => {
               <stop offset="1" stop-color="#0b8456" />
             </linearGradient>
           </defs>
-          <path :d="`M80 150 H${BUS_X}`" stroke="#e6efe9" stroke-width="4" fill="none" />
+          <path :d="`M80 150 H${BUS_X}`" stroke="rgba(90,196,255,.35)" stroke-width="4" fill="none" />
           <path :d="`M80 150 H${BUS_X}`" class="flow" fill="none" :style="flowStyle(view.gridP, view.gridColor)" />
           <g v-for="b in view.branches" :key="b.id">
-            <path :d="`M${BUS_X} ${b.y} H860`" stroke="#e6efe9" stroke-width="4" fill="none" />
+            <path :d="`M${BUS_X} ${b.y} H860`" stroke="rgba(90,196,255,.35)" stroke-width="4" fill="none" />
             <path :d="`M${BUS_X} ${b.y} H860`" class="flow" fill="none" :style="flowStyle(b.p, b.color)" />
           </g>
           <line :x1="BUS_X" y1="24" :x2="BUS_X" y2="252" stroke="url(#bus-g)" stroke-width="8" stroke-linecap="round" />
@@ -144,7 +144,8 @@ svg line {
   font-size: 26px;
   color: #fff;
   border-radius: 10px;
-  background: #0c6b52;
+  background: linear-gradient(180deg, #1aa8e6, #0a4e8a);
+  box-shadow: 0 0 16px rgba(58, 180, 255, 0.55);
 }
 
 .src.is-alarm {
@@ -158,12 +159,12 @@ svg line {
   text-align: center;
   white-space: nowrap;
   border-radius: 10px;
-  background: #fbfaf7;
-  box-shadow: inset 0 0 0 1px rgba(12, 107, 82, 0.35);
+  background: rgba(6, 28, 52, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(90, 196, 255, 0.45), 0 0 12px rgba(20, 120, 210, 0.2);
 }
 
 .gm.is-alarm {
-  background: #fff3f3;
+  background: rgba(60, 12, 16, 0.85);
   box-shadow: inset 0 0 0 1.5px #dc2626, 0 12px 26px -12px rgba(220, 38, 38, 0.5);
 }
 
@@ -174,8 +175,8 @@ svg line {
   padding: 4px 12px;
   white-space: nowrap;
   border-radius: 8px;
-  background: #fbfaf7;
-  box-shadow: inset 0 0 0 1px var(--bc);
+  background: rgba(6, 28, 52, 0.82);
+  box-shadow: inset 0 0 0 1px var(--bc), 0 0 10px rgba(20, 120, 210, 0.15);
 }
 
 .dev {
@@ -186,7 +187,7 @@ svg line {
   padding: 5px 12px;
   white-space: nowrap;
   border-radius: 12px;
-  background: #f6f4ef;
+  background: rgba(8, 36, 64, 0.8);
   box-shadow: inset 0 0 0 1px var(--bc);
 }
 </style>

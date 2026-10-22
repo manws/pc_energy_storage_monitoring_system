@@ -34,12 +34,13 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
   position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
+  border-radius: 2px;
   animation: rise-in 0.7s var(--ease) both;
 }
 
 .shell.is-alarm .panel {
-  box-shadow: inset 0 0 0 1.5px rgba(192, 48, 40, 0.7);
+  border-color: rgba(255, 90, 90, 0.85);
+  box-shadow: inset 0 0 24px rgba(220, 40, 40, 0.18), 0 0 16px rgba(220, 40, 40, 0.28);
 }
 
 .panel {
@@ -48,11 +49,37 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-radius: 12px;
-  background: var(--c-card);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, rgba(12, 48, 86, 0.55), rgba(4, 18, 38, 0.88));
   box-shadow: var(--shadow-soft);
-  border: 1px solid var(--c-line);
+  border: 1px solid rgba(90, 196, 255, 0.45);
   overflow: hidden;
+}
+
+.panel::before,
+.panel::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #7ee7ff;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.panel::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.panel::after {
+  right: -1px;
+  bottom: -1px;
+  border-left: 0;
+  border-top: 0;
 }
 
 .panel-head {
@@ -72,32 +99,33 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
   right: 14px;
   bottom: 0;
   height: 1px;
-  background: var(--c-line);
+  background: linear-gradient(90deg, transparent, rgba(90, 210, 255, 0.55), transparent);
 }
 
 .panel-index {
   min-width: 22px;
   font-size: 11px;
   letter-spacing: 0.08em;
-  color: #0c6b52;
+  color: #3ad4ff;
 }
 
 .is-alarm .panel-index {
-  color: #c03028;
+  color: #ff6b6b;
 }
 
 .panel-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  color: #1a211e;
+  letter-spacing: 0.12em;
+  color: #e7f6ff;
+  text-shadow: 0 0 12px rgba(58, 212, 255, 0.35);
   white-space: nowrap;
 }
 
 .panel-sub {
   font-size: 10px;
-  color: #a3b2ab;
+  color: #5d8eaa;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;

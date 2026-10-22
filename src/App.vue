@@ -70,12 +70,11 @@ onBeforeUnmount(stopEnergyLoop);
 .screen::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: #0c6b52;
-  z-index: 5;
+  inset: 8px;
+  border: 1px solid rgba(80, 190, 255, 0.35);
+  box-shadow: inset 0 0 40px rgba(10, 80, 160, 0.25), 0 0 24px rgba(20, 120, 210, 0.15);
+  pointer-events: none;
+  z-index: 4;
 }
 
 .bg {
@@ -83,9 +82,12 @@ onBeforeUnmount(stopEnergyLoop);
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255, 252, 247, 0.7), transparent 220px),
-    radial-gradient(ellipse 36% 28% at 0% 0%, rgba(12, 107, 82, 0.07), transparent 70%),
-    radial-gradient(ellipse 28% 24% at 100% 100%, rgba(168, 132, 78, 0.06), transparent 70%);
+    linear-gradient(rgba(58, 160, 220, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(58, 160, 220, 0.05) 1px, transparent 1px),
+    radial-gradient(ellipse 70% 42% at 50% 0%, rgba(20, 110, 190, 0.38), transparent 62%),
+    radial-gradient(ellipse 40% 30% at 50% 100%, rgba(0, 70, 140, 0.28), transparent 70%),
+    linear-gradient(180deg, #06203a, #03101c 42%, #020814);
+  background-size: 48px 48px, 48px 48px, auto, auto, auto;
 }
 
 main,
