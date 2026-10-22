@@ -1,19 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { ElMessage } from 'element-plus';
 import { useClock } from '@/composables/useClock';
 import { useEnergy } from '@/composables/useEnergy';
 
 const { time, date } = useClock();
-const { state, soundOn, simulateBackflow } = useEnergy();
+const { state, soundOn } = useEnergy();
 const isFull = ref(false);
 
 const alarm = computed(() => state.value.backflow.active);
-
-function drill() {
-  simulateBackflow(20);
-  ElMessage({ message: '已触发 20 秒逆流演练，储能强制满功率放电', type: 'warning', grouping: true });
-}
 
 function toggleFull() {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
@@ -23,12 +17,16 @@ function toggleFull() {
 const onFs = () => { isFull.value = !!document.fullscreenElement; };
 onMounted(() => document.addEventListener('fullscreenchange', onFs));
 onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
+
+const emit = defineEmits<{ enter: [] }>();
 </script>
 
 <template>
   <header class="head">
     <div class="relative flex items-center gap-3 w-[600px]">
-      <div class="logo"><i class="ri-leaf-line" /></div>
+      <el-tooltip content="进入菜单" placement="bottom">
+        <button type="button" class="logo" @click="emit('enter')"><i class="ri-leaf-line" /></button>
+      </el-tooltip>
       <div class="pill">
         <span class="stat">
           <span class="dot" :class="alarm ? 'is-alarm' : ''" />
@@ -37,7 +35,7 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
         <span class="sep" />
         <span class="stat"><span class="label">在线电表</span><span class="num text-slate-100 text-[16px]">5/5</span></span>
         <span class="sep" />
-        <span class="stat"><span class="label">采集周期</span><span class="num text-slate-100 text-[16px]">2s</span></span>
+        <span class="stat"><span class="label">刷新周期</span><span class="num text-slate-100 text-[16px]">2s</span></span>
       </div>
     </div>
 
@@ -51,11 +49,6 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
         <span class="num text-[24px] leading-none text-slate-100 tracking-wide">{{ time }}</span>
         <span class="text-[12px] text-slate-400">{{ date }}</span>
       </div>
-      <el-tooltip content="人工触发 20 秒逆流演练" placement="bottom">
-        <button class="hbtn is-warn" @click="drill">
-          <span class="ico"><i class="ri-error-warning-line" /></span>逆流演练
-        </button>
-      </el-tooltip>
       <div class="hbtn !cursor-default">
         <i :class="soundOn ? 'ri-volume-up-line text-cyan-300' : 'ri-volume-mute-line text-slate-400'" />
         <el-switch v-model="soundOn" size="small" />
@@ -82,11 +75,20 @@ onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
   height: 36px;
   display: grid;
   place-items: center;
+  padding: 0;
+  border: 0;
   font-size: 18px;
   color: #e7f6ff;
   border-radius: 4px;
   background: linear-gradient(180deg, #1aa8e6, #0a4e8a);
   box-shadow: 0 0 14px rgba(58, 180, 255, 0.55);
+  cursor: pointer;
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.logo:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(58, 212, 255, 0.75);
 }
 
 .stat {

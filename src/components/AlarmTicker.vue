@@ -45,7 +45,7 @@ const counts = computed(() => {
 </script>
 
 <template>
-  <BasePanel title="告警与事件" sub="Alarm Log" index="06">
+  <BasePanel title="告警与事件" sub="Alarm Log" index="04">
     <template #extra>
       <span class="text-[11px] text-slate-500 mr-2">严重 <b class="num text-red-400 text-[13px]">{{ counts.danger }}</b> · 预警 <b class="num text-amber-400 text-[13px]">{{ counts.warning }}</b></span>
       <button v-for="f in FILTERS" :key="f.v" class="chip" :class="{ 'is-active': filter === f.v }" @click="filter = f.v">{{ f.label }}</button>

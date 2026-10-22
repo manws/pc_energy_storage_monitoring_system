@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useEnergy } from '@/composables/useEnergy';
-import { downsample, fmt } from '@/core/utils';
-import { ESS_CAPACITY, SAFE_MARGIN } from '@/core/constants';
-import type { HistoryPoint } from '@/core/types';
 import AnimatedNumber from './base/AnimatedNumber.vue';
-import Sparkline from './base/Sparkline.vue';
 
+const GRID_LIMIT = 630;
 const { state } = useEnergy();
-const TAIL = 150;
-
-const tail = (h: HistoryPoint[]) => h.slice(-TAIL).map((p) => p[1]);
 
 interface Kpi {
   id: string;
@@ -22,8 +16,7 @@ interface Kpi {
   decimals: number;
   sub: string;
   subCls?: string;
-  trend?: number[];
-  zero?: boolean;
+  pair?: [number, number];
   alarm?: boolean;
 }
 
@@ -31,35 +24,35 @@ const kpis = computed<Kpi[]>(() => {
   const s = state.value;
   const P = s.power;
   const bf = s.backflow.active;
-  const h = s.history;
-  const testTrend = tail(h.cab1).map((v, i) => v + (h.cab2[h.cab2.length - TAIL + i]?.[1] ?? 0) + (h.cab3[h.cab3.length - TAIL + i]?.[1] ?? 0));
-  const running = (['cab1', 'cab2', 'cab3'] as const).filter((id) => s.cabPhase[id] !== 'rest').length;
   const essTxt = P.ess > 0.5 ? '充电中' : P.ess < -0.5 ? '放电中' : '静置';
+  const saved = s.energy.ess.exp;
   return [
     {
       id: 'grid', label: '市电总有功功率', icon: 'ri-flashlight-fill', unit: 'kW', color: bf ? '#ff6b6b' : '#2ee59a',
-      value: P.grid, decimals: 2, trend: downsample(tail(h.grid), 50), zero: true, alarm: bf,
-      sub: bf ? '逆流告警 · 请立即处理' : P.grid < SAFE_MARGIN ? `临界 · 裕量 ${fmt(P.grid, 1)} kW` : `防逆流正常 · 裕量 ${fmt(P.grid, 1)} kW`,
-      subCls: bf ? 'text-red-400' : P.grid < SAFE_MARGIN ? 'text-amber-400' : 'text-emerald-400'
+      value: P.grid, decimals: 2, alarm: bf,
+      sub: `市电限制 ${GRID_LIMIT} kW`,
+      subCls: bf ? 'text-red-400' : 'text-slate-400'
     },
     {
       id: 'ess', label: '储能运行功率', icon: 'ri-battery-2-charge-fill', unit: 'kW', color: '#3ad4ff',
-      value: P.ess, decimals: 2, trend: downsample(tail(h.ess), 50),
-      sub: s.essLimited ? `${essTxt} · 防逆流限功率` : essTxt, subCls: s.essLimited ? 'text-amber-400' : 'text-slate-400'
+      value: P.ess, decimals: 2,
+      sub: essTxt,
+      subCls: essTxt === '充电中' ? 'text-emerald-400' : essTxt === '放电中' ? 'text-sky-400' : 'text-slate-400'
     },
     {
-      id: 'test', label: '测试柜总功率', icon: 'ri-server-fill', unit: 'kW', color: '#8ef06a',
-      value: P.cab1 + P.cab2 + P.cab3, decimals: 2, trend: downsample(testTrend, 50),
-      sub: `运行 ${running}/3 台 · 厂区负载 ${fmt(P.base, 1)} kW`
+      id: 'plant', label: '厂区用电总功率', icon: 'ri-server-fill', unit: 'kW', color: '#8ef06a',
+      value: P.cab1 + P.cab2 + P.cab3, decimals: 2,
+      sub: '三台配电柜用电'
     },
     {
-      id: 'soc', label: '储能电池 SOC', icon: 'ri-battery-saver-fill', unit: '%', color: '#7eb6ff',
-      value: s.bms.soc, decimals: 1, trend: downsample(s.socHistory, 50),
-      sub: `可用 ≈ ${fmt((s.bms.soc / 100) * ESS_CAPACITY, 1)} / ${ESS_CAPACITY} kWh`
+      id: 'cell', label: '储能单体极值', icon: 'ri-arrow-up-down-line', unit: 'V', color: '#7eb6ff',
+      value: s.bms.maxCellV, decimals: 3, pair: [s.bms.maxCellV, s.bms.minCellV],
+      sub: '最高 / 最低'
     },
     {
-      id: 'energy', label: '今日市电用电量', icon: 'ri-bar-chart-box-fill', unit: 'kWh', color: '#7ee7ff',
-      value: s.energy.grid.imp, decimals: 1, sub: `反送电量 ${fmt(s.energy.grid.exp, 2)} kWh`
+      id: 'saved', label: '今日节省电量', icon: 'ri-leaf-fill', unit: 'kWh', color: '#7ee7ff',
+      value: saved, decimals: 1,
+      sub: '按储能放电电量折算'
     },
     {
       id: 'alarm', label: '今日告警次数', icon: 'ri-alarm-warning-fill', unit: '次', color: '#f5c15a',
@@ -76,10 +69,14 @@ const kpis = computed<Kpi[]>(() => {
       <div class="flex items-center gap-2 min-w-0">
         <div class="ico"><i :class="k.icon" /></div>
         <div class="label truncate">{{ k.label }}</div>
-        <Sparkline v-if="k.trend" :values="k.trend" :color="k.color" :width="72" :height="26" :zero="k.zero" class="ml-auto shrink-0" />
       </div>
-      <div class="flex items-baseline gap-1 leading-none mt-1">
-        <AnimatedNumber :value="k.value" :decimals="k.decimals" class="text-[24px]" :style="{ color: k.alarm ? '#ff6b6b' : '#e7f6ff' }" />
+      <div class="flex items-baseline gap-1 leading-none mt-1 min-w-0">
+        <template v-if="k.pair">
+          <AnimatedNumber :value="k.pair[0]" :decimals="3" class="text-[20px]" />
+          <span class="text-[14px] text-slate-500">/</span>
+          <AnimatedNumber :value="k.pair[1]" :decimals="3" class="text-[20px]" />
+        </template>
+        <AnimatedNumber v-else :value="k.value" :decimals="k.decimals" class="text-[24px]" :style="{ color: k.alarm ? '#ff6b6b' : '#e7f6ff' }" />
         <span class="text-[12px] text-slate-400">{{ k.unit }}</span>
       </div>
       <div class="text-[12px] mt-1 leading-4" :class="k.subCls || 'text-slate-400'">{{ k.sub }}</div>

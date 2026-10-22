@@ -5,53 +5,52 @@ import { useScreenScale } from '@/composables/useScreenScale';
 import type { MeterId } from '@/core/types';
 import ScreenHeader from './components/ScreenHeader.vue';
 import KpiBar from './components/KpiBar.vue';
-import MeterList from './components/MeterList.vue';
-import MeterDetail from './components/MeterDetail.vue';
-import BackflowGuard from './components/BackflowGuard.vue';
+import MeterBoard from './components/MeterBoard.vue';
 import EnergyTopology from './components/EnergyTopology.vue';
-import PsTrendChart from './components/PsTrendChart.vue';
 import AlarmTicker from './components/AlarmTicker.vue';
 import PcsPanel from './components/PcsPanel.vue';
-import BmsPanel from './components/BmsPanel.vue';
+import PackSocPanel from './components/PackSocPanel.vue';
 import AlarmOverlay from './components/AlarmOverlay.vue';
+import DeskView from './views/DeskView.vue';
 
 const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
 const selected = ref<MeterId>('grid');
+const atHome = ref(true);
 
 onMounted(startEnergyLoop);
 onBeforeUnmount(stopEnergyLoop);
 </script>
 
 <template>
-  <div class="viewport">
+  <div v-show="atHome" class="viewport">
     <div class="frame" :style="frameStyle">
       <div ref="screenRef" class="screen" :style="screenStyle">
         <div class="bg" />
-        <ScreenHeader />
-        <main class="flex flex-col gap-3 px-4 pb-2">
+        <ScreenHeader @enter="atHome = false" />
+        <main class="stage">
           <KpiBar />
           <div class="board">
-            <MeterList class="g-meters" v-model:selected="selected" />
+            <MeterBoard class="g-meters" v-model:selected="selected" />
             <EnergyTopology class="g-flow" />
             <PcsPanel class="g-pcs" />
-            <MeterDetail class="g-detail" v-model:selected="selected" />
-            <PsTrendChart class="g-trend" />
-            <BackflowGuard class="g-guard" />
             <AlarmTicker class="g-alarm" />
-            <BmsPanel class="g-bms" />
+            <PackSocPanel class="g-soc" />
           </div>
         </main>
         <AlarmOverlay />
       </div>
     </div>
   </div>
+  <Transition name="desk">
+    <DeskView v-if="!atHome" @back="atHome = true" />
+  </Transition>
 </template>
 
 <style scoped>
 .viewport {
   position: fixed;
   inset: 0;
-  overflow: auto;
+  overflow: hidden;
   background: var(--c-bg);
 }
 
@@ -64,6 +63,9 @@ onBeforeUnmount(stopEnergyLoop);
   position: absolute;
   left: 0;
   top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--c-bg);
 }
 
@@ -95,74 +97,74 @@ main,
   position: relative;
 }
 
-.board {
-  display: grid;
-  grid-template-columns: 452px minmax(0, 1fr) 470px;
-  grid-template-areas:
-    "meters flow pcs"
-    "detail trend pcs"
-    "guard alarm bms";
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: stretch;
+  padding: 0 16px 12px;
+  min-height: 0;
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: minmax(0, 1.55fr) minmax(0, 0.72fr);
+  grid-template-areas:
+    "meters flow flow pcs"
+    "alarm alarm soc soc";
+  gap: 12px;
 }
 
 .g-meters { grid-area: meters; }
 .g-flow { grid-area: flow; }
 .g-pcs { grid-area: pcs; }
-.g-detail { grid-area: detail; }
-.g-trend { grid-area: trend; }
-.g-guard { grid-area: guard; }
 .g-alarm { grid-area: alarm; }
+.g-soc { grid-area: soc; }
 
-.board :deep(.shell.g-alarm) {
-  min-height: 0;
-}
-
-.board :deep(.shell.g-alarm > .panel) {
-  position: absolute;
-  inset: 0;
-  height: auto;
-}
-.g-bms { grid-area: bms; }
-
-.board :deep(.shell) {
+.board :deep(.shell),
+.board :deep(.panel),
+.board :deep(.panel-body) {
   height: 100%;
+  min-height: 0;
 }
 
 .board :deep(.panel) {
-  height: 100%;
-}
-
-.g-flow :deep(.panel-body),
-.g-trend :deep(.panel-body) {
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
-.g-flow :deep(.panel-body > *),
-.g-trend :deep(.panel-body > *) {
+.board :deep(.panel-body) {
+  flex: 1;
+  overflow: hidden;
+}
+
+.g-flow :deep(.panel-body) {
+  display: flex;
+  flex-direction: column;
+}
+
+.g-flow :deep(.panel-body > *) {
   flex: 1 1 auto;
-  min-height: 260px;
+  min-height: 0;
 }
 
 .g-alarm :deep(.panel-body) {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   overflow: hidden;
 }
 
-.g-guard :deep(.panel-body),
-.g-detail :deep(.panel-body) {
-  display: flex;
-  flex-direction: column;
+.desk-enter-active,
+.desk-leave-active {
+  transition: opacity 0.32s var(--ease), transform 0.32s var(--ease);
 }
 
-.g-guard :deep(.panel-body > *),
-.g-detail :deep(.panel-body > *) {
-  flex: 1 1 auto;
-  min-height: 0;
+.desk-enter-from,
+.desk-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
 }
-
 </style>

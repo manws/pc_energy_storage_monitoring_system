@@ -51,7 +51,7 @@ const view = computed(() => {
 </script>
 
 <template>
-  <BasePanel title="厂区能流拓扑" sub="Energy Flow" index="04" :alarm="view.alarm">
+  <BasePanel title="厂区能流拓扑" sub="Energy Flow" index="02" :alarm="view.alarm">
     <template #extra>
       <span class="text-[11px] text-slate-500 flex items-center gap-3">
         <span><i class="inline-block w-4 h-[2px] align-middle bg-sky-400 mr-1" />正向受电</span>
