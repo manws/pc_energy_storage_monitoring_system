@@ -26,7 +26,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           echarts: ['echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers'],
-          vendor: ['vue', 'element-plus']
+          vendor: ['vue', 'vue-router', 'element-plus']
         }
       }
     }

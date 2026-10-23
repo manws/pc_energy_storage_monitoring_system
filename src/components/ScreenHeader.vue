@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useClock } from '@/composables/useClock';
 import { useEnergy } from '@/composables/useEnergy';
 
@@ -18,14 +19,14 @@ const onFs = () => { isFull.value = !!document.fullscreenElement; };
 onMounted(() => document.addEventListener('fullscreenchange', onFs));
 onBeforeUnmount(() => document.removeEventListener('fullscreenchange', onFs));
 
-const emit = defineEmits<{ enter: [] }>();
+const router = useRouter();
 </script>
 
 <template>
   <header class="head">
     <div class="relative flex items-center gap-3 w-[600px]">
       <el-tooltip content="进入菜单" placement="bottom">
-        <button type="button" class="logo" @click="emit('enter')"><i class="ri-leaf-line" /></button>
+        <button type="button" class="logo" @click="router.push({ name: 'meters' })"><i class="ri-leaf-line" /></button>
       </el-tooltip>
       <div class="pill">
         <span class="stat">

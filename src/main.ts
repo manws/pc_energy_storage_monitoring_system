@@ -16,7 +16,9 @@ import '@fontsource/ibm-plex-mono/600.css';
 import 'remixicon/fonts/remixicon.css';
 import './styles/main.css';
 import App from './App.vue';
+import router from './router';
 
 const app = createApp(App);
+app.use(router);
 [ElButton, ElCheckbox, ElCheckboxGroup, ElDialog, ElSwitch, ElTooltip].forEach((c) => app.use(c));
 app.mount('#app');

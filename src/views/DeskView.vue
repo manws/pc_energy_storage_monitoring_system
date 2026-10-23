@@ -1,36 +1,36 @@
 <script setup lang="ts">
-import { useDesk } from '@/composables/useDesk';
-import SoonView from '@/views/SoonView.vue';
+import { useRoute, useRouter } from 'vue-router';
+import { deskMenus } from '@/router';
 
-const emit = defineEmits<{ back: [] }>();
-const { current, go, deskMenus } = useDesk();
+const route = useRoute();
+const router = useRouter();
 </script>
 
 <template>
   <div class="desk">
     <header class="bar">
-      <button type="button" class="back" @click="emit('back')">
+      <button type="button" class="back" @click="router.push({ name: 'home' })">
         <i class="ri-arrow-left-line" />返回总览
       </button>
       <nav class="menus">
-        <button
+        <router-link
           v-for="item in deskMenus"
-          :key="item.id"
-          type="button"
+          :key="item.name"
           class="menu"
-          :class="{ 'is-on': current.id === item.id }"
-          @click="go(item.id)"
+          :class="{ 'is-on': route.name === item.name }"
+          :to="{ name: item.name }"
         >
           {{ item.label }}
-        </button>
+        </router-link>
       </nav>
       <span class="cycle"><em>刷新周期</em><b class="num">2s</b></span>
     </header>
     <div class="stage">
-      <Transition name="pane" mode="out-in">
-        <component :is="current.view" v-if="current.view" :key="current.id" />
-        <SoonView v-else :key="current.id" :note="current.label" />
-      </Transition>
+      <router-view v-slot="{ Component }">
+        <Transition name="pane" mode="out-in">
+          <component :is="Component" :key="String(route.name)" />
+        </Transition>
+      </router-view>
     </div>
   </div>
 </template>
@@ -64,6 +64,7 @@ const { current, go, deskMenus } = useDesk();
   color: inherit;
   font: inherit;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .back {
