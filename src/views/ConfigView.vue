@@ -20,6 +20,7 @@ const meterIndex = ref(0);
 const bmsIndex = ref(0);
 
 const workspace = computed(() => WORKSPACES.find((w) => w.id === workspaceId.value) ?? WORKSPACES[0]);
+const channelList = computed(() => workspace.value.channels.split(/[,，]\s*/).map((item) => item.trim()).filter(Boolean));
 const meter = computed(() => workspace.value.meters[meterIndex.value] ?? workspace.value.meters[0]);
 const bms = computed(() => workspace.value.bms[bmsIndex.value] ?? workspace.value.bms[0]);
 
@@ -56,15 +57,25 @@ function bmsFields(b: BmsCfg) {
 
 <template>
   <div class="page">
-    <div class="toolbar">
-      <label class="ws">
+    <div class="unit">
+    <header class="unit-head">
+      <div class="ws">
         <span>工作单元</span>
-        <select v-model="workspaceId">
-          <option v-for="item in WORKSPACES" :key="item.id" :value="item.id">{{ item.id }}</option>
-        </select>
-      </label>
-      <p class="channels">设备通道 <b class="num">{{ workspace.channels }}</b></p>
-    </div>
+        <el-select
+          v-model="workspaceId"
+          class="desk-field ws-select"
+          popper-class="desk-select"
+          :teleported="false"
+          :fit-input-width="true"
+        >
+          <el-option v-for="item in WORKSPACES" :key="item.id" :label="item.id" :value="item.id" />
+        </el-select>
+      </div>
+      <p class="channels">
+        <span>设备通道</span>
+        <b v-for="ch in channelList" :key="ch" class="ch num">{{ ch }}</b>
+      </p>
+    </header>
 
     <nav class="tabs" aria-label="配置分类">
       <button
@@ -189,6 +200,7 @@ function bmsFields(b: BmsCfg) {
         </table>
       </div>
     </section>
+    </div>
   </div>
 </template>
 
@@ -198,14 +210,27 @@ function bmsFields(b: BmsCfg) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   padding: 14px 18px 16px;
 }
 
-.toolbar {
+.unit {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(90, 196, 255, 0.38);
+  background:
+    linear-gradient(90deg, #3ad4ff, transparent 32%) top / 100% 2px no-repeat,
+    rgba(4, 16, 32, 0.38);
+}
+
+.unit-head {
   display: flex;
   align-items: center;
-  gap: 22px;
+  min-height: 58px;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(90, 196, 255, 0.22);
+  background: rgba(8, 36, 64, 0.42);
 }
 
 .ws {
@@ -217,32 +242,53 @@ function bmsFields(b: BmsCfg) {
   letter-spacing: 0.08em;
 }
 
-.ws select {
-  min-width: 220px;
+.ws-select { width: 220px; }
+.ws-select :deep(.el-select__wrapper) {
   height: 36px;
-  padding: 0 32px 0 12px;
-  border: 1px solid rgba(90, 196, 255, 0.55);
-  background: rgba(6, 28, 52, 0.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237ee7ff' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") right 12px center no-repeat;
-  color: #e7f6ff;
-  font: inherit;
-  letter-spacing: 0.04em;
-  appearance: none;
-  cursor: pointer;
+  min-height: 36px;
+  border-radius: 0;
+  background: rgba(6, 28, 52, 0.9);
+  box-shadow: 0 0 0 1px rgba(90, 196, 255, 0.55) inset;
 }
+.ws-select :deep(.el-select__wrapper.is-focused),
+.ws-select :deep(.el-select__wrapper.is-hovering) {
+  box-shadow: 0 0 0 1px #7ee7ff inset;
+}
+.ws-select :deep(.el-select__placeholder),
+.ws-select :deep(.el-select__selected-item) { color: #e7f6ff; }
+.ws-select :deep(.el-select__caret) { color: #7ee7ff; }
 
 
 .channels {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0 28px;
+  padding-left: 28px;
+  border-left: 1px solid rgba(90, 196, 255, 0.28);
   color: #7eb4cc;
   font-size: 13px;
 }
 
-.channels b { color: #e7f6ff; font-weight: 500; margin-left: 6px; }
+.ch {
+  min-width: 40px;
+  height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(90, 196, 255, 0.35);
+  background: rgba(6, 28, 52, 0.5);
+  color: #e7f6ff;
+  font-weight: 500;
+}
 
 .tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(90, 196, 255, 0.22);
 }
 
 .tabs button,
@@ -270,8 +316,6 @@ function bmsFields(b: BmsCfg) {
   min-height: 0;
   overflow: auto;
   padding: 16px 18px 20px;
-  border: 1px solid rgba(90, 196, 255, 0.38);
-  background: rgba(4, 16, 32, 0.45);
 }
 
 .picks {
@@ -311,7 +355,7 @@ function bmsFields(b: BmsCfg) {
   align-items: center;
   padding: 0 12px;
   border: 1px solid rgba(90, 196, 255, 0.28);
-  background: rgba(8, 32, 58, 0.72);
+  background: rgba(8, 32, 58, 0.5);
   color: #8ecbff;
 }
 
@@ -342,7 +386,7 @@ th {
   top: 0;
   color: #7eb4cc;
   font-weight: 500;
-  background: #07182c;
+  background: rgba(7, 24, 44, 0.78);
 }
 
 td { color: #d7eef8; }

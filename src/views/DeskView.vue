@@ -12,6 +12,7 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   <div class="viewport">
     <div class="frame" :style="frameStyle">
       <div ref="screenRef" class="screen" :style="screenStyle">
+    <div class="bg" />
     <header class="bar">
       <button type="button" class="back" @click="router.push({ name: 'home' })">
         <i class="ri-arrow-left-line" />返回总览
@@ -45,7 +46,7 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: #04101c;
+  background: var(--c-bg);
 }
 
 .frame { position: relative; margin: 0 auto; }
@@ -58,10 +59,24 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   flex-direction: column;
   overflow: hidden;
   color: #e7f6ff;
-  background:
-    radial-gradient(ellipse 50% 24% at 50% 0%, rgba(26, 168, 230, 0.16), transparent 70%),
-    #04101c;
+  background: var(--c-bg);
 }
+
+.bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(58, 160, 220, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(58, 160, 220, 0.05) 1px, transparent 1px),
+    radial-gradient(ellipse 70% 42% at 50% 0%, rgba(20, 110, 190, 0.38), transparent 62%),
+    radial-gradient(ellipse 40% 30% at 50% 100%, rgba(0, 70, 140, 0.28), transparent 70%),
+    linear-gradient(180deg, #06203a, #03101c 42%, #020814);
+  background-size: 48px 48px, 48px 48px, auto, auto, auto;
+}
+
+.bar,
+.stage { position: relative; }
 
 .bar {
   height: 64px;
@@ -119,7 +134,6 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
 .menu:not(.is-on):hover { color: #c5e6f5; }
 
 .stage {
-  position: relative;
   flex: 1;
   min-height: 0;
 }

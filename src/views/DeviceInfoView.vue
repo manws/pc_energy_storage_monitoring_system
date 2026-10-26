@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(90, 196, 255, 0.38);
   background:
     linear-gradient(90deg, var(--accent), transparent 42%) top / 100% 2px no-repeat,
-    rgba(4, 16, 32, 0.55);
+    rgba(4, 16, 32, 0.42);
 }
 
 .rail {
@@ -326,7 +326,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 6px;
   padding: 8px 14px 8px;
-  background: rgba(6, 28, 52, 0.78);
+  background: rgba(6, 28, 52, 0.5);
   border: 1px solid rgba(90, 196, 255, 0.2);
 }
 .bay header { display: flex; align-items: center; gap: 8px; }

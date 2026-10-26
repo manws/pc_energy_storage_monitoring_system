@@ -264,7 +264,7 @@ watch(pages, (n) => { if (page.value > n) page.value = n; });
   min-height: 0;
   overflow: auto;
   border: 1px solid rgba(90, 196, 255, 0.38);
-  background: rgba(4, 16, 32, 0.45);
+  background: rgba(4, 16, 32, 0.38);
 }
 
 table {
@@ -286,7 +286,7 @@ th {
   color: #7eb4cc;
   font-weight: 500;
   letter-spacing: 0.08em;
-  background: #07182c;
+  background: rgba(7, 24, 44, 0.78);
 }
 
 td { color: #d7eef8; }

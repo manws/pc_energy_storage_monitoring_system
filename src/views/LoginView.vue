@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useClock } from '@/composables/useClock';
 import core from '@/assets/login/monitor/core.png';
 import corners from '@/assets/login/monitor/corners.svg';
@@ -22,12 +22,11 @@ const SEATS = [
 ];
 
 const scenes = [
-  { name: '厂区', image: plantScene, alt: '厂区场景' },
-  { name: '储能', image: storageScene, alt: '储能场景' },
-  { name: '设备测试', image: deviceScene, alt: '设备测试场景' }
+  { name: '厂区监控', image: plantScene, alt: '厂区监控' },
+  { name: '储能控制', image: storageScene, alt: '储能控制' },
+  { name: '设备运行', image: deviceScene, alt: '设备运行' }
 ];
 
-const route = useRoute();
 const router = useRouter();
 const { time, date } = useClock();
 
@@ -65,9 +64,15 @@ function showHelp() {
   showNotice('请联系厂区系统管理员激活值班账号。', false);
 }
 
+function inputValue(id: string, fallback: string) {
+  const node = document.getElementById(id);
+  if (node instanceof HTMLInputElement && node.value) return node.value;
+  return fallback;
+}
+
 function submit() {
-  const name = login.value.trim();
-  const secret = password.value;
+  const name = inputValue('username', login.value).trim();
+  const secret = inputValue('password', password.value).trim();
   if (!name || !secret) {
     showNotice('请填写登录名称和密码', true);
     return;
@@ -81,15 +86,15 @@ function submit() {
     showNotice('该账号未激活', true);
     return;
   }
-  sessionStorage.setItem(SEAT_KEY, seat.login);
-  if (remember.value) localStorage.setItem(SEAT_KEY, seat.login);
-  else localStorage.removeItem(SEAT_KEY);
-  const redirect = route.query.redirect;
-  if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
-    router.push(redirect);
+  try {
+    sessionStorage.setItem(SEAT_KEY, seat.login);
+    if (remember.value) localStorage.setItem(SEAT_KEY, seat.login);
+    else localStorage.removeItem(SEAT_KEY);
+  } catch {
+    showNotice('浏览器阻止了登录状态保存', true);
     return;
   }
-  router.push({ name: 'home' });
+  router.replace({ name: 'home' });
 }
 
 onMounted(() => {
@@ -115,7 +120,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
             </svg>
           </div>
           <div class="brand-text">
-            <span class="breadcrumb">北交新源</span>
+            <span class="breadcrumb">北交新能</span>
             <span class="brand-title">厂区智慧能源监控中心</span>
           </div>
         </div>
@@ -164,9 +169,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
         <div class="endpoint endpoint-storage" />
         <div class="endpoint endpoint-test" />
 
-        <span class="scene-label label-plant">厂区</span>
-        <span class="scene-label label-storage">储能</span>
-        <span class="scene-label label-test">设备测试</span>
+        <span class="scene-label label-plant">厂区监控</span>
+        <span class="scene-label label-storage">储能控制</span>
+        <span class="scene-label label-test">设备运行</span>
       </section>
 
       <section class="login-card" aria-labelledby="login-title">
@@ -180,7 +185,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
 
         <div class="card-header">
           <h2 id="login-title" class="card-title">登录</h2>
-          <p class="card-subtitle">使用值班账号登录，进入能源监控总览</p>
+          <p class="card-subtitle"></p>
         </div>
 
         <form class="form" @submit.prevent="submit">
@@ -230,10 +235,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
               </span>
               <span class="remember-text">记住登录</span>
             </label>
-            <a class="help-link" href="#help" @click.prevent="showHelp">账号激活帮助</a>
+            <a class="help-link" href="#help" @click.prevent="showHelp"></a>
           </div>
 
-          <button class="primary-btn" type="submit">进入总览</button>
+          <button class="primary-btn" type="submit">进入系统</button>
           <p v-if="notice" class="notice" :class="{ error: noticeError }" role="status">{{ notice }}</p>
         </form>
       </section>
@@ -246,7 +251,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
           </div>
           <span class="update-text">数据更新16:46:30 · 接入站点12 · 通信延迟28ms</span>
         </div>
-        <span class="copyright">北交新源 · 厂区智慧能源监控中心 v3.2</span>
+        <span class="copyright">北交新能 · 厂区智慧能源监控中心 v3.2</span>
       </footer>
     </main>
   </div>
@@ -555,9 +560,22 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
   text-shadow: 0 0 12px rgba(92, 209, 255, 0.55);
   white-space: nowrap;
 }
-.label-plant { left: 342px; top: 447px; width: 72px; text-align: right; }
-.label-storage { left: 597px; top: 490px; width: 72px; text-align: left; }
-.label-test { left: 753px; top: 442px; width: 112px; text-align: left; }
+.label-plant {
+  left: 408px;
+  top: 447px;
+  width: max-content;
+  transform: translateX(-100%);
+}
+.label-storage {
+  left: 603px;
+  top: 490px;
+  width: max-content;
+}
+.label-test {
+  left: 761px;
+  top: 442px;
+  width: max-content;
+}
 
 .login-card {
   position: absolute;
@@ -566,12 +584,12 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
   width: 600px;
   height: 856px;
   border-radius: 24px;
-  padding: 48px;
+  padding: 56px 48px 48px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 40px;
+  gap: 36px;
   background: linear-gradient(to bottom, rgba(15, 36, 61, 0.85) 0%, rgba(10, 23, 41, 0.85) 100%);
   box-shadow: inset 0 0 0 1px rgba(64, 184, 255, 0.25), 0 24px 64px rgba(0, 0, 0, 0.45);
 }
@@ -602,27 +620,44 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
 .input {
   width: 100%;
   height: 52px;
+  box-sizing: border-box;
   border-radius: 11px;
-  padding: 0 16px;
+  padding: 15px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   background: rgba(5, 15, 31, 0.8);
+  border: 1px solid rgba(64, 184, 255, 0.28);
 }
-.input-user { box-shadow: inset 0 0 0 1px rgba(92, 209, 255, 0.6), 0 0 12px rgba(92, 209, 255, 0.18); }
-.input-pass { box-shadow: inset 0 0 0 1px rgba(64, 184, 255, 0.22); }
-.input:focus-within { box-shadow: inset 0 0 0 1px #5cd1ff, 0 0 12px rgba(92, 209, 255, 0.18); }
+.input:focus-within { border-color: #5cd1ff; }
+.input svg { display: block; flex: 0 0 auto; }
 .input input {
-  flex: 1;
+  flex: 1 1 auto;
+  align-self: center;
   min-width: 0;
-  height: 100%;
+  height: 22px;
   padding: 0;
+  margin: 0;
+  appearance: none;
+  color-scheme: dark;
   background: transparent;
   border: none;
   outline: none;
+  box-shadow: none;
   font: inherit;
   font-size: 15px;
+  line-height: 22px;
   color: var(--text-strong);
+}
+.input input:-webkit-autofill,
+.input input:-webkit-autofill:hover,
+.input input:-webkit-autofill:focus,
+.input input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-strong);
+  caret-color: var(--text-strong);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1000px rgba(5, 15, 31, 0.01);
+  transition: background-color 99999s ease-out 0s;
 }
 .input input::placeholder { color: var(--text-dim); opacity: 1; }
 .eye-btn {
