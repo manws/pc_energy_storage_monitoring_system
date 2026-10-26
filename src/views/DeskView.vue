@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useScreenScale } from '@/composables/useScreenScale';
 import { deskMenus } from '@/router';
@@ -7,7 +6,6 @@ import { deskMenus } from '@/router';
 const route = useRoute();
 const router = useRouter();
 const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
-const cycle = computed(() => (route.name === 'devices' ? '10s' : '2s'));
 </script>
 
 <template>
@@ -29,7 +27,6 @@ const cycle = computed(() => (route.name === 'devices' ? '10s' : '2s'));
           {{ item.label }}
         </router-link>
       </nav>
-      <span class="cycle"><em>刷新周期</em><b class="num">{{ cycle }}</b></span>
     </header>
     <div class="stage">
       <router-view v-slot="{ Component }">
@@ -120,18 +117,6 @@ const cycle = computed(() => (route.name === 'devices' ? '10s' : '2s'));
 }
 
 .menu:not(.is-on):hover { color: #c5e6f5; }
-
-.cycle {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  color: #7eb4cc;
-  font-size: 13px;
-}
-
-.cycle b { color: #e7f6ff; font-size: 16px; font-weight: 500; }
-.cycle em { font-style: normal; }
 
 .stage {
   position: relative;
