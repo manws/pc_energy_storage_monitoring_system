@@ -230,10 +230,6 @@ function bmsFields(b: BmsCfg) {
   cursor: pointer;
 }
 
-.ws select:focus-visible {
-  outline: 2px solid #7ee7ff;
-  outline-offset: 2px;
-}
 
 .channels {
   margin: 0;
@@ -268,11 +264,6 @@ function bmsFields(b: BmsCfg) {
   border-color: #7ee7ff;
 }
 
-.tabs button:focus-visible,
-.picks button:focus-visible {
-  outline: 2px solid #7ee7ff;
-  outline-offset: 2px;
-}
 
 .board {
   flex: 1;

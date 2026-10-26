@@ -379,8 +379,6 @@ onBeforeUnmount(() => {
 .detail:focus-visible {
   color: #e7f6ff;
   border-bottom-color: #e7f6ff;
-  outline: 2px solid #7ee7ff;
-  outline-offset: 2px;
 }
 
 .panel {

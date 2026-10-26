@@ -39,9 +39,9 @@ body,
   -webkit-font-smoothing: antialiased;
 }
 
-button:focus-visible {
-  outline: 2px solid var(--c-accent-soft);
-  outline-offset: 2px;
+:focus,
+:focus-visible {
+  outline: none;
 }
 
 @layer components {
@@ -113,20 +113,113 @@ button:focus-visible {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.desk-field {
+  --el-input-bg-color: rgba(6, 28, 52, 0.72);
+  --el-input-text-color: #e7f6ff;
+  --el-input-placeholder-color: #7eb4cc;
+  --el-input-icon-color: #9fd0e6;
+  --el-input-border-color: rgba(90, 196, 255, 0.35);
+  --el-input-hover-border-color: #7ee7ff;
+  --el-input-focus-border-color: #7ee7ff;
+}
+
+.desk-field .el-input__wrapper {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 0;
+  background: rgba(6, 28, 52, 0.72);
+  box-shadow: 0 0 0 1px rgba(90, 196, 255, 0.35) inset;
+}
+
+.desk-field .el-input__wrapper.is-focus,
+.desk-field .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px #7ee7ff inset;
+}
+
+.desk-field .el-input__inner {
+  color: #e7f6ff;
+  font-family: inherit;
+}
+
+.desk-field .el-input__prefix,
+.desk-field .el-input__suffix,
+.desk-field .el-input__icon {
+  color: #9fd0e6;
+}
+
+.el-overlay {
+  background-color: rgba(2, 8, 16, 0.62);
+}
+
 .el-dialog {
-  border-radius: 4px;
-  padding: 20px 22px;
+  --el-dialog-bg-color: #07182c;
+  --el-dialog-padding-primary: 18px;
+  border-radius: 0;
+  padding: 18px 18px 16px;
   background: #07182c;
-  border: 1px solid rgba(90, 196, 255, 0.4);
-  box-shadow: 0 0 32px rgba(16, 110, 200, 0.28);
+  border: 1px solid rgba(90, 196, 255, 0.45);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
 }
 
 .el-dialog__title {
+  font-size: 16px;
   font-weight: 600;
   color: #e7f6ff;
+  letter-spacing: 0.08em;
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+  color: #9fd0e6;
+}
+
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: #7ee7ff;
+}
+
+.el-dialog__body {
+  color: #d7eef8;
+  font-size: 13px;
+}
+
+.el-button {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: rgba(90, 196, 255, 0.45);
+  --el-button-text-color: #c5e6f5;
+  --el-button-hover-bg-color: rgba(58, 212, 255, 0.12);
+  --el-button-hover-text-color: #e7f6ff;
+  --el-button-hover-border-color: #7ee7ff;
+  --el-button-active-bg-color: rgba(58, 212, 255, 0.2);
+  --el-button-active-border-color: #7ee7ff;
+  --el-button-active-text-color: #e7f6ff;
+  border-radius: 0;
+  font-weight: 500;
   letter-spacing: 0.06em;
 }
 
+.el-button--primary {
+  --el-button-bg-color: #3ad4ff;
+  --el-button-border-color: #7ee7ff;
+  --el-button-text-color: #04101c;
+  --el-button-hover-bg-color: #7ee7ff;
+  --el-button-hover-border-color: #7ee7ff;
+  --el-button-hover-text-color: #04101c;
+  --el-button-active-bg-color: #1aa8e6;
+  --el-button-active-border-color: #1aa8e6;
+  --el-button-active-text-color: #04101c;
+}
+
+.el-checkbox {
+  --el-checkbox-bg-color: transparent;
+  --el-checkbox-input-border: 1px solid rgba(90, 196, 255, 0.55);
+  --el-checkbox-checked-bg-color: #3ad4ff;
+  --el-checkbox-checked-input-border-color: #3ad4ff;
+  --el-checkbox-checked-icon-color: #04101c;
+  --el-checkbox-input-border-color-hover: #7ee7ff;
+  height: auto;
+}
+
 .el-checkbox.is-bordered {
-  border-radius: 10px;
+  border-radius: 0;
+  border-color: rgba(90, 196, 255, 0.35);
+  background: rgba(6, 28, 52, 0.55);
 }
