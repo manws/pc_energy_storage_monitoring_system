@@ -107,6 +107,7 @@ export interface EnergyState {
   power: Record<PowerKey, number>;
   meters: Record<MeterId, MeterReading>;
   history: Record<MeterId, HistoryPoint[]>;
+  pcsHistory: [HistoryPoint[], HistoryPoint[]];
   socHistory: number[];
   pcs: [PcsChannel, PcsChannel];
   bms: BmsData;

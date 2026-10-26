@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useScreenScale } from '@/composables/useScreenScale';
 import { deskMenus } from '@/router';
@@ -6,6 +7,7 @@ import { deskMenus } from '@/router';
 const route = useRoute();
 const router = useRouter();
 const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
+const cycle = computed(() => (route.name === 'devices' ? '10s' : '2s'));
 </script>
 
 <template>
@@ -27,7 +29,7 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
           {{ item.label }}
         </router-link>
       </nav>
-      <span class="cycle"><em>刷新周期</em><b class="num">2s</b></span>
+      <span class="cycle"><em>刷新周期</em><b class="num">{{ cycle }}</b></span>
     </header>
     <div class="stage">
       <router-view v-slot="{ Component }">

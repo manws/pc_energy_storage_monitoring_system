@@ -1,6 +1,7 @@
 import type { BmsFieldMeta, CabPhase, MeterMeta, PcsFieldMeta, PhaseKey } from './types';
 
 export const STEP_MS = 2000;
+export const ESS_REFRESH_MS = 10000;
 export const HISTORY_MS = 3600 * 1000;
 export const CELL_COUNT = 224;
 export const TEMP_COUNT = 64;

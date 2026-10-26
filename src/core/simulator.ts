@@ -103,6 +103,7 @@ export function createSimulator(): Simulator {
     power: { base: 85, ess: 0, cab1: 0, cab2: 0, cab3: 0, grid: 80 },
     meters: { grid: emptyReading(), ess: emptyReading(), cab1: emptyReading(), cab2: emptyReading(), cab3: emptyReading() },
     history: { grid: [], ess: [], cab1: [], cab2: [], cab3: [] },
+    pcsHistory: [[], []],
     socHistory: [],
     pcs: [makeChannel(1), makeChannel(2)],
     bms: {
@@ -219,6 +220,15 @@ export function createSimulator(): Simulator {
     const split = 0.5 + rand(-0.03, 0.03);
     updateChannel(state.pcs[0], essP * split, bms.totalV, dt, ts, fault, bms.maxT);
     updateChannel(state.pcs[1], essP * (1 - split), bms.totalV, dt, ts, fault, bms.maxT);
+
+    const pcsLimit = ts - HISTORY_MS;
+    for (let i = 0; i < 2; i++) {
+      const h = state.pcsHistory[i];
+      h.push([ts, Math.round(state.pcs[i].power * 100) / 100]);
+      let drop = 0;
+      while (drop < h.length && h[drop][0] < pcsLimit) drop++;
+      if (drop) h.splice(0, drop);
+    }
 
     const I = state.pcs[0].current + state.pcs[1].current;
     bms.soc = clamp(bms.soc + ((essP * dt) / 3600 / ESS_CAPACITY) * 100, 3, 99);

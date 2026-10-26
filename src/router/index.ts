@@ -4,6 +4,7 @@ import DeskView from '@/views/DeskView.vue';
 import MeterDataView from '@/views/MeterDataView.vue';
 import DeviceInfoView from '@/views/DeviceInfoView.vue';
 import SoonView from '@/views/SoonView.vue';
+import ConfigView from '@/views/ConfigView.vue';
 
 export interface DeskMenu {
   name: string;
@@ -18,9 +19,9 @@ interface DeskPage extends DeskMenu {
 
 const deskPages: DeskPage[] = [
   { name: 'meters', label: '电表数据', title: '五路有功功率', component: MeterDataView },
-  { name: 'devices', label: '设备信息', title: '充放电机与 BMS', component: DeviceInfoView },
-  { name: 'stats', label: '统计', title: '运行统计', component: SoonView, props: { note: '统计' } },
-  { name: 'config', label: '配置', title: '系统配置', component: SoonView, props: { note: '配置' } },
+  { name: 'devices', label: '储能监控', title: '储能通道监控', component: DeviceInfoView },
+  { name: 'stats', label: '告警信息', title: '告警信息', component: SoonView, props: { note: '告警信息' } },
+  { name: 'config', label: '配置信息', title: '配置信息', component: ConfigView },
   { name: 'users', label: '用户管理', title: '用户管理', component: SoonView, props: { note: '用户管理' } }
 ];
 
