@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   values: number[];
   cols: number;
   maxNo: number;
   minNo: number;
   unit: string;
   decimals: number;
-}>();
+  fitHeight?: boolean;
+}>(), { fitHeight: false });
 
 const wrap = ref<HTMLDivElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -40,20 +41,25 @@ function draw() {
   const width = w.clientWidth;
   const rows = Math.ceil(vals.length / props.cols);
   const gap = 2;
-  const cell = Math.max(2, (width - gap * (props.cols - 1)) / props.cols);
+  let cell = (width - gap * (props.cols - 1)) / props.cols;
+  if (props.fitHeight && w.clientHeight > 24) {
+    cell = Math.min(cell, (w.clientHeight - gap * (rows - 1)) / rows);
+  }
+  cell = Math.max(2, cell);
+  const drawW = Math.round(props.cols * cell + gap * (props.cols - 1));
   const height = Math.round(rows * cell + gap * (rows - 1));
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  if (c.width !== Math.round(width * dpr) || c.height !== Math.round(height * dpr)) {
-    c.width = Math.round(width * dpr);
+  if (c.width !== Math.round(drawW * dpr) || c.height !== Math.round(height * dpr)) {
+    c.width = Math.round(drawW * dpr);
     c.height = Math.round(height * dpr);
-    c.style.width = `${width}px`;
+    c.style.width = `${drawW}px`;
     c.style.height = `${height}px`;
   }
-  layout = { cell, gap, w: width };
+  layout = { cell, gap, w: drawW };
   const ctx = c.getContext('2d');
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, width, height);
+  ctx.clearRect(0, 0, drawW, height);
   let min = Infinity;
   let max = -Infinity;
   for (const v of vals) {
@@ -111,13 +117,21 @@ onBeforeUnmount(() => ro?.disconnect());
 </script>
 
 <template>
-  <div ref="wrap" class="relative w-full">
+  <div ref="wrap" class="wrap" :class="{ fit: fitHeight }">
     <canvas ref="canvas" class="block cursor-crosshair" @mousemove="onMove" @mouseleave="tip.show = false" />
     <div v-if="tip.show" class="tip num" :style="{ left: `${tip.x + 10}px`, top: `${tip.y - 26}px` }">{{ tip.text }}</div>
   </div>
 </template>
 
 <style scoped>
+.wrap { position: relative; width: 100%; }
+.wrap.fit {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .tip {
   position: absolute;
   pointer-events: none;

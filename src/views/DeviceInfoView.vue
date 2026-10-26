@@ -1,43 +1,51 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useEnergy } from '@/composables/useEnergy';
-import { BMS_FIELDS, CELL_COUNT, PCS_FIELDS, TEMP_COUNT } from '@/core/constants';
-import { fmt, isNum } from '@/core/utils';
-import type { PcsChannel, PcsFieldMeta } from '@/core/types';
+import { CELL_COUNT, TEMP_COUNT } from '@/core/constants';
+import { fmt } from '@/core/utils';
 import BmsHeatmap from '@/components/BmsHeatmap.vue';
 
 const { state } = useEnergy();
 const heat = ref<'v' | 't'>('v');
-const focus = ref<'ch0' | 'ch1' | 'bms'>('ch0');
-const FAULT_KEYS = ['fault', 'pwmFault', 'dcdcFault'];
 
-function cell(f: PcsFieldMeta, ch: PcsChannel) {
-  const v = ch[f.key];
-  if (f.key === 'status') return { text: String(v), cls: v === '运行' ? 'ok' : v === '故障' ? 'bad' : '' };
-  if (FAULT_KEYS.includes(f.key)) return { text: String(v), cls: v === '无' ? 'ok' : 'bad' };
-  if (f.key === 'time') return { text: String(v).slice(11) || '--', cls: '' };
-  if (isNum(v)) return { text: fmt(v, f.d ?? 1), cls: '' };
-  return { text: String(v ?? '--'), cls: '' };
-}
-
-const channels = computed(() => state.value.pcs.map((ch, i) => ({
-  id: i === 0 ? 'ch0' as const : 'ch1' as const,
-  title: `通道${ch.no}`,
+const channels = computed(() => state.value.pcs.map((ch) => ({
+  title: `通道 ${ch.no}`,
   status: ch.status,
-  power: ch.power,
-  voltage: ch.voltage,
-  current: ch.current,
+  statusCls: ch.status === '运行' ? 'ok' : ch.status === '故障' ? 'bad' : '',
   mode: ch.mode,
-  rows: PCS_FIELDS.map((f) => ({ label: f.label, ...cell(f, ch) }))
+  power: fmt(ch.power, 2),
+  powerCls: ch.power > 0.5 ? 'pos' : ch.power < -0.5 ? 'neg' : '',
+  voltage: fmt(ch.voltage, 1),
+  current: fmt(ch.current, 1),
+  time: String(ch.time).slice(11) || '--',
+  step: ch.step || '--',
+  energy: [
+    { label: '充电安时', value: fmt(ch.chgAh, 2), unit: 'Ah' },
+    { label: '放电安时', value: fmt(ch.disAh, 2), unit: 'Ah' },
+    { label: '充电电量', value: fmt(ch.chgWh, 0), unit: 'Wh' },
+    { label: '放电电量', value: fmt(ch.disWh, 0), unit: 'Wh' }
+  ],
+  faults: [
+    { label: '故障', text: ch.fault, ok: ch.fault === '无' },
+    { label: 'PWM', text: ch.pwmFault, ok: ch.pwmFault === '无' },
+    { label: 'DCDC', text: ch.dcdcFault, ok: ch.dcdcFault === '无' }
+  ]
 })));
 
 const bms = computed(() => {
   const b = state.value.bms;
   const I = b.totalI;
   return {
-    soc: b.soc,
+    soc: fmt(b.soc, 1),
     status: I > 1 ? '充电中' : I < -1 ? '放电中' : '静置',
-    fields: BMS_FIELDS.map((f) => ({ ...f, text: `${f.prefix ?? ''}${fmt(b[f.key], f.d)}${f.unit ? ' ' + f.unit : ''}` })),
+    totalV: fmt(b.totalV, 1),
+    totalI: fmt(b.totalI, 1),
+    extremes: [
+      { label: '最大单体', value: fmt(b.maxCellV, 3), unit: 'V', no: b.maxCellNo },
+      { label: '最小单体', value: fmt(b.minCellV, 3), unit: 'V', no: b.minCellNo },
+      { label: '最高温度', value: fmt(b.maxT, 1), unit: '℃', no: b.maxTNo },
+      { label: '最低温度', value: fmt(b.minT, 1), unit: '℃', no: b.minTNo }
+    ],
     raw: b
   };
 });
@@ -45,69 +53,94 @@ const bms = computed(() => {
 
 <template>
   <div class="page">
-    <section class="cards">
-      <button
-        v-for="ch in channels"
-        :key="ch.id"
-        type="button"
-        class="card"
-        :class="{ 'is-on': focus === ch.id, 'is-bad': ch.status === '故障' }"
-        @click="focus = ch.id"
-      >
-        <div class="card-top">
-          <span>设备</span>
-          <span class="st" :class="ch.status === '运行' ? 'ok' : ch.status === '故障' ? 'bad' : ''">{{ ch.status }}</span>
+    <article v-for="ch in channels" :key="ch.title" class="col">
+      <header class="head">
+        <div>
+          <p class="kicker">储能充放电机</p>
+          <h2>{{ ch.title }}</h2>
         </div>
-        <div class="title">{{ ch.title }}</div>
-        <div class="desc">储能充放电机</div>
-        <div class="hero"><span class="num">{{ fmt(ch.power, 2) }}</span><span>kW</span></div>
-        <div class="metrics">
-          <span><em>电压</em>{{ fmt(ch.voltage, 1) }} V</span>
-          <span><em>电流</em>{{ fmt(ch.current, 1) }} A</span>
-        </div>
-        <div class="mode">{{ ch.mode }}</div>
-      </button>
-      <button type="button" class="card" :class="{ 'is-on': focus === 'bms' }" @click="focus = 'bms'">
-        <div class="card-top"><span>BMS</span><span class="st ok">{{ bms.status }}</span></div>
-        <div class="title">储能电池</div>
-        <div class="desc">{{ CELL_COUNT }} 串单体</div>
-        <div class="hero"><span class="num">{{ fmt(bms.soc, 1) }}</span><span>%</span></div>
-        <div class="mode">SOC</div>
-      </button>
-    </section>
-
-    <section class="block">
-      <header class="block-head"><h2>设备数据</h2><p>两路充放电机实时参数</p></header>
-      <div class="cols">
-        <article v-for="ch in channels" :key="ch.id" class="panel" :class="{ 'is-on': focus === ch.id }">
-          <h3>{{ ch.title }}</h3>
-          <div v-for="row in ch.rows" :key="row.label" class="field">
-            <span>{{ row.label }}</span>
-            <b :class="row.cls">{{ row.text }}</b>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="block">
-      <header class="block-head">
-        <h2>BMS 数据</h2>
-        <div class="tools">
-          <button type="button" class="chip" :class="{ 'is-active': heat === 'v' }" @click="heat = 'v'">电压</button>
-          <button type="button" class="chip" :class="{ 'is-active': heat === 't' }" @click="heat = 't'">温度</button>
+        <div class="tags">
+          <span class="pill" :class="ch.statusCls">{{ ch.status }}</span>
+          <span class="mode">{{ ch.mode }}</span>
         </div>
       </header>
-      <div class="bms-grid">
-        <article v-for="f in bms.fields" :key="f.key" class="field">
-          <span>{{ f.label }}</span>
-          <b>{{ f.text }}</b>
-        </article>
+
+      <div class="hero">
+        <div class="stat main">
+          <em>功率</em>
+          <div class="val"><b class="num" :class="ch.powerCls">{{ ch.power }}</b><span>kW</span></div>
+        </div>
+        <div class="stat">
+          <em>电压</em>
+          <div class="val"><b class="num">{{ ch.voltage }}</b><span>V</span></div>
+        </div>
+        <div class="stat">
+          <em>电流</em>
+          <div class="val"><b class="num">{{ ch.current }}</b><span>A</span></div>
+        </div>
+      </div>
+
+      <div class="quad">
+        <div v-for="item in ch.energy" :key="item.label" class="tile">
+          <em>{{ item.label }}</em>
+          <div class="val"><b class="num">{{ item.value }}</b><span>{{ item.unit }}</span></div>
+        </div>
+      </div>
+
+      <footer class="foot">
+        <div class="step">
+          <em>工步</em>
+          <b>{{ ch.step }}</b>
+          <span class="time num">{{ ch.time }}</span>
+        </div>
+        <div class="faults">
+          <span v-for="f in ch.faults" :key="f.label" class="pill" :class="f.ok ? 'ok' : 'bad'">
+            {{ f.label }} {{ f.text }}
+          </span>
+        </div>
+      </footer>
+    </article>
+
+    <article class="bms">
+      <header class="head">
+        <div>
+          <p class="kicker">BMS · {{ CELL_COUNT }} 串</p>
+          <h2>储能电池</h2>
+        </div>
+        <span class="pill ok">{{ bms.status }}</span>
+      </header>
+      <div class="strip">
+        <div class="stat main">
+          <em>SOC</em>
+          <div class="val"><b class="num">{{ bms.soc }}</b><span>%</span></div>
+        </div>
+        <div class="stat">
+          <em>总电压</em>
+          <div class="val"><b class="num">{{ bms.totalV }}</b><span>V</span></div>
+        </div>
+        <div class="stat">
+          <em>总电流</em>
+          <div class="val"><b class="num">{{ bms.totalI }}</b><span>A</span></div>
+        </div>
+        <div v-for="item in bms.extremes" :key="item.label" class="stat">
+          <em>{{ item.label }} <i class="num">#{{ item.no }}</i></em>
+          <div class="val"><b class="num">{{ item.value }}</b><span>{{ item.unit }}</span></div>
+        </div>
       </div>
       <div class="heat">
+        <div class="heat-bar">
+          <span>{{ heat === 'v' ? `${CELL_COUNT} 串单体电压` : `${TEMP_COUNT} 点温度` }} · 白框最大 · 蓝框最小</span>
+          <div class="tools">
+            <button type="button" class="chip" :class="{ 'is-active': heat === 'v' }" @click="heat = 'v'">电压</button>
+            <button type="button" class="chip" :class="{ 'is-active': heat === 't' }" @click="heat = 't'">温度</button>
+          </div>
+        </div>
         <BmsHeatmap
           v-if="heat === 'v'"
+          class="map"
+          fit-height
           :values="bms.raw.cells"
-          :cols="16"
+          :cols="32"
           :max-no="bms.raw.maxCellNo"
           :min-no="bms.raw.minCellNo"
           unit="V"
@@ -115,67 +148,104 @@ const bms = computed(() => {
         />
         <BmsHeatmap
           v-else
+          class="map"
+          fit-height
           :values="bms.raw.temps"
-          :cols="8"
+          :cols="16"
           :max-no="bms.raw.maxTNo"
           :min-no="bms.raw.minTNo"
           unit="℃"
           :decimals="1"
         />
-        <p class="hint">{{ heat === 'v' ? `${CELL_COUNT} 串单体电压` : `${TEMP_COUNT} 点温度` }}</p>
       </div>
-    </section>
+    </article>
   </div>
 </template>
 
 <style scoped>
 .page {
   height: 100%;
-  overflow: auto;
-  padding: 18px 22px 28px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px 16px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.col, .bms {
+  min-width: 0;
+  border: 1px solid rgba(90, 196, 255, 0.28);
+  background: rgba(6, 28, 52, 0.62);
+}
+.col { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.bms {
+  grid-column: 1 / -1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  padding: 12px 16px 14px;
 }
 
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.head, .step, .heat-bar, .val { display: flex; align-items: center; }
+.head, .step, .heat-bar { justify-content: space-between; }
+.head { gap: 12px; }
+.head h2 { margin: 2px 0 0; font-size: 20px; font-weight: 600; }
+.kicker, em, .mode, .time, .heat-bar > span { color: #7eb4cc; font-style: normal; }
+.kicker { margin: 0; font-size: 12px; letter-spacing: 0.06em; }
+.tags { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.mode { font-size: 12px; }
 
-.card, .panel, .heat, .field {
-  border: 1px solid rgba(90, 196, 255, 0.28);
-  background: rgba(6, 28, 52, 0.72);
+.pill {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  border: 1px solid rgba(126, 180, 204, 0.45);
+  color: #d5e8f2;
 }
+.pill.ok { color: #7dffc3; border-color: rgba(125, 255, 195, 0.45); }
+.pill.bad { color: #ff8a8a; border-color: rgba(255, 138, 138, 0.55); }
 
-.card {
-  padding: 14px 16px 16px;
-  text-align: left;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
+.hero, .quad, .strip { display: grid; gap: 8px; }
+.hero { grid-template-columns: 1.35fr 1fr 1fr; }
+.quad { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.strip { grid-template-columns: 1.25fr repeat(6, minmax(0, 1fr)); }
+
+.stat, .tile, .soc {
+  padding: 8px 10px;
+  background: rgba(4, 18, 36, 0.45);
+  border: 1px solid rgba(90, 196, 255, 0.14);
 }
+.stat em, .tile em { display: block; font-size: 12px; }
+.stat em i { font-style: normal; margin-left: 4px; }
+.val { align-items: baseline; gap: 4px; margin-top: 2px; }
+.stat b, .tile b { font-size: 18px; font-weight: 500; line-height: 1.1; }
+.stat.main b, .soc b { font-size: 28px; }
+.val span { font-size: 12px; color: #7eb4cc; }
+.pos { color: #7dffc3; }
+.neg { color: #8aecff; }
 
-.card.is-on, .panel.is-on { border-color: #7ee7ff; box-shadow: 0 0 16px rgba(58, 212, 255, 0.25); }
-.card.is-bad { border-color: rgba(255, 107, 107, 0.7); }
-.card-top, .metrics, .block-head, .field { display: flex; align-items: center; }
-.card-top, .block-head { justify-content: space-between; }
-.card-top, .desc, .mode, .hint { color: #7eb4cc; font-size: 12px; }
-.title { margin-top: 10px; font-size: 20px; font-weight: 600; }
-.hero { display: flex; align-items: baseline; gap: 6px; margin-top: 8px; }
-.hero .num { font-size: 34px; line-height: 1; }
-.metrics { gap: 16px; margin-top: 10px; }
-.metrics em { display: block; font-style: normal; color: #7eb4cc; font-size: 12px; }
-.st.ok { color: #2ee59a; }
-.st.bad, .bad { color: #ff8a8a; }
-.ok { color: #2ee59a; }
+.foot { display: flex; flex-direction: column; gap: 8px; }
+.step { gap: 8px; }
+.step em { flex: none; font-size: 12px; }
+.step b { min-width: 0; font-size: 14px; font-weight: 500; }
+.time { flex: none; margin-left: auto; font-size: 12px; }
+.faults { display: flex; gap: 8px; }
 
-.block-head h2 { margin: 0; font-size: 16px; letter-spacing: 0.08em; }
-.block-head p { margin: 0; color: #7eb4cc; }
-.tools { display: flex; gap: 8px; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
-.panel { padding: 12px 14px; }
-.panel h3 { margin: 0 0 8px; }
-.field { justify-content: space-between; gap: 8px; padding: 8px 12px; margin-top: 6px; }
-.field span { color: #7eb4cc; }
-.bms-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-.heat { margin-top: 12px; padding: 12px; }
-.hint { margin: 8px 0 0; }
+.heat {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(4, 18, 36, 0.35);
+  border: 1px solid rgba(90, 196, 255, 0.14);
+}
+.heat-bar { flex: none; font-size: 12px; }
+.tools { display: flex; gap: 6px; }
+.map { flex: 1; min-height: 0; }
 </style>

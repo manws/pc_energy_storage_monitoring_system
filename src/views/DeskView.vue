@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
+import { useScreenScale } from '@/composables/useScreenScale';
 import { deskMenus } from '@/router';
 
 const route = useRoute();
 const router = useRouter();
+const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
 </script>
 
 <template>
-  <div class="desk">
+  <div class="viewport">
+    <div class="frame" :style="frameStyle">
+      <div ref="screenRef" class="screen" :style="screenStyle">
     <header class="bar">
       <button type="button" class="back" @click="router.push({ name: 'home' })">
         <i class="ri-arrow-left-line" />返回总览
@@ -32,20 +36,32 @@ const router = useRouter();
         </Transition>
       </router-view>
     </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.desk {
+.viewport {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  overflow: hidden;
+  background: #04101c;
+}
+
+.frame { position: relative; margin: 0 auto; }
+
+.screen {
+  position: absolute;
+  left: 0;
+  top: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  color: #e7f6ff;
   background:
     radial-gradient(ellipse 50% 24% at 50% 0%, rgba(26, 168, 230, 0.16), transparent 70%),
     #04101c;
-  color: #e7f6ff;
 }
 
 .bar {
@@ -120,6 +136,8 @@ const router = useRouter();
   flex: 1;
   min-height: 0;
 }
+
+.stage :deep(.page) { height: 100%; }
 
 .pane-enter-active,
 .pane-leave-active { transition: opacity 0.28s var(--ease), transform 0.28s var(--ease); }

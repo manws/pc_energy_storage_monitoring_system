@@ -3,6 +3,7 @@ node_modules
 /dist
 /imgs
 .eslintcache
+dist.zip
 
 # local env files
 .env
