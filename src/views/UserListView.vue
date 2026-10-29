@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
-import { fmtTime } from '@/core/utils';
-import ListPager from '@/components/ListPager.vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { EmsApi } from '@/core/api';
+import type { RawUser } from '@/core/api';
 
 interface UserRow {
   id: number;
@@ -13,6 +13,7 @@ interface UserRow {
   active: boolean;
   updatedAt: string;
   updatedBy: string;
+  groupId: number;
 }
 
 interface UserForm {
@@ -21,20 +22,19 @@ interface UserForm {
   login: string;
   phone: string;
   email: string;
+  password: string;
   active: boolean;
+  groupId: number;
 }
 
 const ROLE = '监控人员';
-const EDITOR = '值班长';
 const pageSize = ref(50);
 type ActiveFilter = 'all' | 'on' | 'off';
 
-const users = ref<UserRow[]>([
-  { id: 1, name: '值班长', login: 'chief', phone: '13800001001', email: 'chief@plant.local', role: ROLE, active: true, updatedAt: '2026-10-20', updatedBy: '系统' },
-  { id: 2, name: '监控一席', login: 'monitor1', phone: '13800001002', email: 'monitor1@plant.local', role: ROLE, active: true, updatedAt: '2026-10-22', updatedBy: '值班长' },
-  { id: 3, name: '监控二席', login: 'monitor2', phone: '13800001003', email: 'monitor2@plant.local', role: ROLE, active: true, updatedAt: '2026-10-24', updatedBy: '值班长' },
-  { id: 4, name: '运维席', login: 'ops', phone: '13800001004', email: 'ops@plant.local', role: ROLE, active: false, updatedAt: '2026-09-30', updatedBy: '系统' }
-]);
+const users = ref<UserRow[]>([]);
+const loading = ref(false);
+const saving = ref(false);
+const listError = ref('');
 
 const open = ref(false);
 const error = ref('');
@@ -42,6 +42,37 @@ const keyword = ref('');
 const activeFilter = ref<ActiveFilter>('all');
 const page = ref(1);
 const form = reactive<UserForm>(blank());
+
+function rowOf(u: RawUser): UserRow {
+  return {
+    id: u.id,
+    name: u.userName,
+    login: u.userCode,
+    phone: u.phone ?? '',
+    email: u.email ?? '',
+    role: ROLE,
+    active: u.enabled === 1,
+    updatedAt: (u.updateOn ?? '').slice(0, 10),
+    updatedBy: u.updateBy ?? '',
+    groupId: u.usergroupId ?? 1
+  };
+}
+
+async function load() {
+  loading.value = true;
+  listError.value = '';
+  try {
+    const res = await EmsApi.userPage({ pageIndex: 1, pageSize: 500 });
+    users.value = (res.userList ?? []).map(rowOf);
+  } catch (e) {
+    listError.value = e instanceof Error ? e.message : String(e);
+    users.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
 
 const matched = computed(() => {
   const word = keyword.value.trim().toLowerCase();
@@ -59,7 +90,7 @@ watch([keyword, activeFilter], () => { page.value = 1; });
 watch(pages, (n) => { if (page.value > n) page.value = n; });
 
 function blank(): UserForm {
-  return { id: null, name: '', login: '', phone: '', email: '', active: true };
+  return { id: null, name: '', login: '', phone: '', email: '', password: '', active: true, groupId: 1 };
 }
 
 function create() {
@@ -75,7 +106,9 @@ function edit(row: UserRow) {
     login: row.login,
     phone: row.phone,
     email: row.email,
-    active: row.active
+    password: '',
+    active: row.active,
+    groupId: row.groupId
   });
   error.value = '';
   open.value = true;
@@ -85,7 +118,7 @@ function close() {
   open.value = false;
 }
 
-function save() {
+async function save() {
   const name = form.name.trim();
   const login = form.login.trim();
   const phone = form.phone.trim();
@@ -94,12 +127,16 @@ function save() {
     error.value = '请填写登录名称和姓名';
     return;
   }
-  if (!/^1\d{10}$/.test(phone)) {
+  if (phone && !/^1\d{10}$/.test(phone)) {
     error.value = '手机号需要 11 位数字';
     return;
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     error.value = '邮箱格式不正确';
+    return;
+  }
+  if (form.id == null && !form.password.trim()) {
+    error.value = '新增用户需要设置初始密码';
     return;
   }
   const duplicated = users.value.some((item) => item.login === login && item.id !== form.id);
@@ -107,16 +144,32 @@ function save() {
     error.value = '登录名称已存在';
     return;
   }
-  const stamp = { updatedAt: fmtTime(Date.now(), true).slice(0, 10), updatedBy: EDITOR, role: ROLE };
-  if (form.id == null) {
-    const next = users.value.reduce((max, item) => Math.max(max, item.id), 0) + 1;
-    users.value = [{ id: next, name, login, phone, email, active: form.active, ...stamp }, ...users.value];
-  } else {
-    users.value = users.value.map((item) => (
-      item.id === form.id ? { ...item, name, login, phone, email, active: form.active, ...stamp } : item
-    ));
+
+  const payload: Partial<RawUser> = {
+    usergroupId: form.groupId,
+    userCode: login,
+    userName: name,
+    phone,
+    email,
+    enabled: form.active ? 1 : 0
+  };
+  if (form.password.trim()) payload.userPwd = form.password.trim();
+
+  saving.value = true;
+  error.value = '';
+  try {
+    if (form.id == null) {
+      await EmsApi.userInsert(payload);
+    } else {
+      await EmsApi.userUpdate(form.id, { ...payload, userId: form.id });
+    }
+    close();
+    await load();
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    saving.value = false;
   }
-  close();
 }
 </script>
 
@@ -164,6 +217,8 @@ function save() {
           </tr>
         </tbody>
       </table>
+      <p v-else-if="loading" class="empty">加载中…<span>正在获取用户列表</span></p>
+      <p v-else-if="listError" class="empty">用户列表加载失败<span>{{ listError }}</span></p>
       <p v-else class="empty">没有符合条件的用户<span>换个状态，或改一下关键字</span></p>
     </div>
     <footer class="foot">
@@ -180,8 +235,9 @@ function save() {
       @closed="error = ''"
     >
       <form class="form" @submit.prevent="save">
-        <label>登录名称<el-input v-model="form.login" class="desk-field" maxlength="20" /></label>
+        <label>登录名称<el-input v-model="form.login" class="desk-field" maxlength="20" :disabled="form.id != null" /></label>
         <label>姓名<el-input v-model="form.name" class="desk-field" maxlength="20" /></label>
+        <label>{{ form.id == null ? '初始密码' : '重置密码' }}<el-input v-model="form.password" class="desk-field" type="password" maxlength="40" show-password :placeholder="form.id == null ? '请输入初始密码' : '留空则不修改'" /></label>
         <label>手机号<el-input v-model="form.phone" class="desk-field" maxlength="11" /></label>
         <label>邮箱<el-input v-model="form.email" class="desk-field" maxlength="40" /></label>
         <p class="role"><span>权限</span><b>{{ ROLE }}</b></p>
@@ -189,8 +245,8 @@ function save() {
         <p v-if="error" class="error">{{ error }}</p>
       </form>
       <template #footer>
-        <el-button @click="close">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button @click="close" :disabled="saving">取消</el-button>
+        <el-button type="primary" @click="save" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -288,8 +344,8 @@ tr.off .link { color: #9adfff; }
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid rgba(90, 196, 255, 0.38);
-  background: rgba(4, 16, 32, 0.38);
+  border: 1px solid rgba(90, 196, 255, 0.28);
+  background: #06182e;
 }
 
 table {
@@ -311,7 +367,7 @@ th {
   color: #7eb4cc;
   font-weight: 500;
   letter-spacing: 0.08em;
-  background: rgba(7, 24, 44, 0.78);
+  background: #06182e;
 }
 
 td { color: #d7eef8; }

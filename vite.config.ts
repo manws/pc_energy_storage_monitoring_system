@@ -11,13 +11,25 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 32991,
     strictPort: true,
-    allowedHosts: ['.preview.with.woa.com', '.devnet-preview.with.woa.com']
+    allowedHosts: ['.preview.with.woa.com', '.devnet-preview.with.woa.com'],
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY || 'http://8.140.182.55:26029',
+        changeOrigin: true
+      }
+    }
   },
   preview: {
     host: '0.0.0.0',
     port: 32991,
     strictPort: true,
-    allowedHosts: ['.preview.with.woa.com', '.devnet-preview.with.woa.com']
+    allowedHosts: ['.preview.with.woa.com', '.devnet-preview.with.woa.com'],
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY || 'http://8.140.182.55:26029',
+        changeOrigin: true
+      }
+    }
   },
   build: {
     target: 'es2020',

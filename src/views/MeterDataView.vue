@@ -171,8 +171,7 @@ function toggle(id: MeterId, name: string) {
 .card,
 .chart-card {
   border: 1px solid rgba(90, 196, 255, 0.28);
-  background: rgba(6, 28, 52, 0.5);
-  box-shadow: inset 0 0 18px rgba(30, 140, 220, 0.1);
+  background: #06182e;
 }
 
 .card {

@@ -46,7 +46,7 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: var(--c-bg);
+  background: #04101c;
 }
 
 .frame { position: relative; margin: 0 auto; }
@@ -59,7 +59,7 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   flex-direction: column;
   overflow: hidden;
   color: #e7f6ff;
-  background: var(--c-bg);
+  background: #04101c;
 }
 
 .bg {
@@ -67,12 +67,10 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(58, 160, 220, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(58, 160, 220, 0.05) 1px, transparent 1px),
-    radial-gradient(ellipse 70% 42% at 50% 0%, rgba(20, 110, 190, 0.38), transparent 62%),
-    radial-gradient(ellipse 40% 30% at 50% 100%, rgba(0, 70, 140, 0.28), transparent 70%),
-    linear-gradient(180deg, #06203a, #03101c 42%, #020814);
-  background-size: 48px 48px, 48px 48px, auto, auto, auto;
+    linear-gradient(rgba(58, 160, 220, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(58, 160, 220, 0.03) 1px, transparent 1px),
+    #04101c;
+  background-size: 48px 48px, 48px 48px, auto;
 }
 
 .bar,
@@ -84,7 +82,7 @@ const { screenRef, screenStyle, frameStyle } = useScreenScale(1920);
   align-items: center;
   gap: 28px;
   padding: 0 22px;
-  border-bottom: 1px solid rgba(90, 196, 255, 0.22);
+  border-bottom: 1px solid rgba(90, 196, 255, 0.16);
 }
 
 .back,

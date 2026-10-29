@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
-import { useEnergy } from '@/composables/useEnergy';
 import { fmtTime } from '@/core/utils';
-import type { AlarmItem } from '@/core/types';
+import { EmsApi } from '@/core/api';
+import type { RawEventPageItem } from '@/core/api';
+import { parseTime } from '@/core/apiMapper';
 import ListPager from '@/components/ListPager.vue';
 
 type Kind = '事件' | '报警';
@@ -26,81 +27,74 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: '报警', label: '报警' }
 ];
 
-const { state } = useEnergy();
+// eventType: 0=事件, 1=报警
+const TYPE_CODE: Record<Kind, number> = { 事件: 0, 报警: 1 };
+
 const filter = ref<Filter>('all');
 const keyword = ref('');
 const date = ref<string | null>(null);
 const page = ref(1);
 const pageSize = ref(50);
+const total = ref(0);
 const rows = ref<AlarmRow[]>([]);
+const loading = ref(false);
+const listError = ref('');
 
-function dayKey(ts: number) {
-  const d = new Date(ts);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+function kindOf(item: RawEventPageItem): Kind {
+  return item.eventTypeCode === 1 || item.eventTypeName === '报警' ? '报警' : '事件';
 }
 
-function eventName(source: string, msg: string) {
-  if (msg.includes('逆流已解除')) return '逆流解除';
-  if (msg.includes('逆流')) return '逆流报警';
-  if (msg.includes('温度恢复')) return '温度恢复';
-  if (msg.includes('温度偏高')) return '温度偏高';
-  if (msg.includes('SOC偏低')) return 'SOC偏低';
-  if (msg.includes('功率调节')) return '防逆流延迟';
-  if (msg.includes('自检通过')) return 'BMS自检';
-  if (msg.includes('通讯链路')) return '通道通讯';
-  if (msg.includes('数据采集')) return '电表采集';
-  if (msg.includes('服务启动')) return '服务启动';
-  if (msg.includes('切换至')) return '工况切换';
-  if (msg.includes('已确认')) return '告警确认';
-  return source;
-}
-
-function channelOf(source: string, msg: string) {
-  if (msg.includes('CH1') && msg.includes('CH2')) return '20, 21';
-  if (msg.includes('CH1')) return '20';
-  if (msg.includes('CH2')) return '21';
-  if (source === 'BMS' || source === '储能PCS') return '20, 21';
-  return '—';
-}
-
-function toRow(item: AlarmItem, index: number): AlarmRow {
-  const kind: Kind = item.level === 'danger' || item.level === 'warning' ? '报警' : '事件';
+function toRow(item: RawEventPageItem, index: number): AlarmRow {
   return {
     id: item.id,
-    no: index + 1,
-    workspace: 'WorkSpace0',
-    channel: channelOf(item.source, item.msg),
-    kind,
-    name: eventName(item.source, item.msg),
-    desc: item.msg,
-    ts: item.ts
+    no: (page.value - 1) * pageSize.value + index + 1,
+    workspace: item.workSpaceName ? `WorkSpace${item.workSpaceName}` : 'WorkSpace0',
+    channel: item.channelId || '—',
+    kind: kindOf(item),
+    name: item.eventName || '—',
+    desc: item.eventMsg || '',
+    ts: parseTime(item.eventTime)
   };
 }
 
-onMounted(() => {
-  rows.value = state.value.alarms.map(toRow);
-});
+async function load() {
+  loading.value = true;
+  listError.value = '';
+  try {
+    const body: { eventType?: number; eventDate?: string; pageIndex: number; pageSize: number } = {
+      pageIndex: page.value,
+      pageSize: pageSize.value
+    };
+    if (filter.value !== 'all') body.eventType = TYPE_CODE[filter.value];
+    if (date.value) body.eventDate = date.value;
+    const res = await EmsApi.eventPage(body);
+    rows.value = (res.eventList ?? []).map(toRow);
+    total.value = res.page?.totalCount ?? rows.value.length;
+  } catch (e) {
+    listError.value = e instanceof Error ? e.message : String(e);
+    rows.value = [];
+    total.value = 0;
+  } finally {
+    loading.value = false;
+  }
+}
 
-const matched = computed(() => {
+onMounted(load);
+
+// 关键词过滤在当前页内进行（后端不支持关键词检索）。
+const shown = computed(() => {
   const word = keyword.value.trim().toLowerCase();
-  return rows.value.filter((item) => {
-    if (filter.value !== 'all' && item.kind !== filter.value) return false;
-    if (date.value && dayKey(item.ts) !== date.value) return false;
-    if (!word) return true;
-    return [item.workspace, item.channel, item.name, item.desc].some((field) => field.toLowerCase().includes(word));
-  });
+  if (!word) return rows.value;
+  return rows.value.filter((item) =>
+    [item.workspace, item.channel, item.name, item.desc].some((field) => field.toLowerCase().includes(word))
+  );
 });
-const counts = computed(() => {
-  const tally = { all: rows.value.length, 事件: 0, 报警: 0 };
-  for (const item of rows.value) tally[item.kind] += 1;
-  return tally;
-});
-const pages = computed(() => Math.max(1, Math.ceil(matched.value.length / pageSize.value)));
-const shown = computed(() => matched.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
+const counts = computed(() => ({ all: total.value }));
+const pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 
-watch([filter, keyword, date], () => { page.value = 1; });
-watch(pages, (n) => { if (page.value > n) page.value = n; });
+// 筛选条件变化：回第一页并重新拉取；翻页/改每页条数：直接重新拉取。
+watch([filter, date], () => { page.value = 1; void load(); });
+watch([page, pageSize], () => { void load(); });
 </script>
 
 <template>
@@ -113,7 +107,7 @@ watch(pages, (n) => { if (page.value > n) page.value = n; });
           type="button"
           :class="{ on: filter === item.id }"
           @click="filter = item.id"
-        >{{ item.label }}<b class="num">{{ counts[item.id] }}</b></button>
+        >{{ item.label }}<b v-if="item.id === 'all'" class="num">{{ counts.all }}</b></button>
       </nav>
       <div class="tools">
         <label class="find">
@@ -164,10 +158,12 @@ watch(pages, (n) => { if (page.value > n) page.value = n; });
           </tr>
         </tbody>
       </table>
+      <p v-else-if="loading" class="empty">加载中…<span>正在获取事件记录</span></p>
+      <p v-else-if="listError" class="empty">事件记录加载失败<span>{{ listError }}</span></p>
       <p v-else class="empty">没有符合条件的记录<span>换个类型、日期或关键字</span></p>
     </div>
     <footer class="foot">
-      <p>共 <b class="num">{{ matched.length }}</b> 条 · 进入页面时的记录</p>
+      <p>共 <b class="num">{{ total }}</b> 条</p>
       <ListPager v-model:page="page" v-model:size="pageSize" :pages="pages" />
     </footer>
   </div>
@@ -263,8 +259,8 @@ watch(pages, (n) => { if (page.value > n) page.value = n; });
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid rgba(90, 196, 255, 0.38);
-  background: rgba(4, 16, 32, 0.38);
+  border: 1px solid rgba(90, 196, 255, 0.28);
+  background: #06182e;
 }
 
 table {
@@ -286,7 +282,7 @@ th {
   color: #7eb4cc;
   font-weight: 500;
   letter-spacing: 0.08em;
-  background: rgba(7, 24, 44, 0.78);
+  background: #06182e;
 }
 
 td { color: #d7eef8; }

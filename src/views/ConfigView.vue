@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { WORKSPACES } from '@/core/workspaceConfig';
-import type { BmsCfg, MeterCfg } from '@/core/workspaceConfig';
+import type { BmsCfg, MeterCfg, WorkspaceCfg } from '@/core/workspaceConfig';
+import { EmsApi } from '@/core/api';
+import { mapParamToWorkspace } from '@/core/apiMapper';
 
 const SECTIONS = [
   { id: 'meter', label: '电表配置' },
@@ -14,12 +16,29 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]['id'];
 
-const workspaceId = ref(WORKSPACES[0].id);
+const EMPTY_WS: WorkspaceCfg = {
+  id: '', channels: '', meters: [], bms: [], protocol: [],
+  ess: {
+    socMinWarn: 0, socMinAlarm: 0, socMaxWarn: 0, socMaxAlarm: 0, socHold: 0,
+    cellMinWarn: 0, cellMinAlarm: 0, cellMaxWarn: 0, cellMaxAlarm: 0, cellHold: 0,
+    deviceMaxKw: 0, channelMaxKw: 0, deviceMaxA: 0, gridChgKw: 0, gridDisKw: 0
+  },
+  device: {
+    name: '', tcpIp: '', tcpPort: 0, udpLocalIp: '', udpLocalPort: 0,
+    udpRemoteIp: '', udpRemotePort: 0, channels: '[]'
+  },
+  params: { vMax: 0, vMin: 0, iMax: 0, iMin: 0, pMax: 0, pMin: 0, tMax: 0, tMin: 0, cellMax: 0, cellMin: 0 }
+};
+
+const workspaces = ref<WorkspaceCfg[]>([]);
+const workspaceId = ref('');
 const section = ref<SectionId>('meter');
 const meterIndex = ref(0);
 const bmsIndex = ref(0);
+const loading = ref(false);
+const error = ref('');
 
-const workspace = computed(() => WORKSPACES.find((w) => w.id === workspaceId.value) ?? WORKSPACES[0]);
+const workspace = computed(() => workspaces.value.find((w) => w.id === workspaceId.value) ?? workspaces.value[0] ?? EMPTY_WS);
 const channelList = computed(() => workspace.value.channels.split(/[,，]\s*/).map((item) => item.trim()).filter(Boolean));
 const meter = computed(() => workspace.value.meters[meterIndex.value] ?? workspace.value.meters[0]);
 const bms = computed(() => workspace.value.bms[bmsIndex.value] ?? workspace.value.bms[0]);
@@ -29,7 +48,32 @@ watch(workspaceId, () => {
   bmsIndex.value = 0;
 });
 
-function meterFields(m: MeterCfg) {
+async function load() {
+  loading.value = true;
+  error.value = '';
+  try {
+    const names = await EmsApi.workSpaceNameList();
+    const ids = names && names.length ? names : WORKSPACES.map((w) => w.id);
+    const list = await Promise.all(ids.map(async (id) => {
+      const raw = await EmsApi.paramData(id);
+      return mapParamToWorkspace(raw, id);
+    }));
+    workspaces.value = list;
+    workspaceId.value = list[0]?.id ?? '';
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e);
+    // 接口不可用时回退本地静态配置，避免页面空白。
+    workspaces.value = WORKSPACES;
+    workspaceId.value = WORKSPACES[0].id;
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
+
+function meterFields(m?: MeterCfg) {
+  if (!m) return [] as const;
   return [
     ['电表名称', m.name],
     ['目标IP', m.ip],
@@ -40,7 +84,8 @@ function meterFields(m: MeterCfg) {
   ] as const;
 }
 
-function bmsFields(b: BmsCfg) {
+function bmsFields(b?: BmsCfg) {
+  if (!b) return [] as const;
   return [
     ['BMS名称', b.name],
     ['BMS索引', String(b.index)],
@@ -68,7 +113,7 @@ function bmsFields(b: BmsCfg) {
           :teleported="false"
           :fit-input-width="true"
         >
-          <el-option v-for="item in WORKSPACES" :key="item.id" :label="item.id" :value="item.id" />
+          <el-option v-for="item in workspaces" :key="item.id" :label="item.id" :value="item.id" />
         </el-select>
       </div>
       <p class="channels">
@@ -218,10 +263,10 @@ function bmsFields(b: BmsCfg) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(90, 196, 255, 0.38);
+  border: 1px solid rgba(90, 196, 255, 0.28);
   background:
     linear-gradient(90deg, #3ad4ff, transparent 32%) top / 100% 2px no-repeat,
-    rgba(4, 16, 32, 0.38);
+    #06182e;
 }
 
 .unit-head {
@@ -230,7 +275,7 @@ function bmsFields(b: BmsCfg) {
   min-height: 58px;
   padding: 0 18px;
   border-bottom: 1px solid rgba(90, 196, 255, 0.22);
-  background: rgba(8, 36, 64, 0.42);
+  background: #06182e;
 }
 
 .ws {
@@ -386,7 +431,7 @@ th {
   top: 0;
   color: #7eb4cc;
   font-weight: 500;
-  background: rgba(7, 24, 44, 0.78);
+  background: #06182e;
 }
 
 td { color: #d7eef8; }

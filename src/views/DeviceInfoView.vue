@@ -116,7 +116,7 @@ const opened = computed(() => {
   };
 });
 const panelStyle = computed(() => ({
-  position: 'fixed',
+  position: 'fixed' as const,
   top: `${pos.value.top}px`,
   left: `${pos.value.left}px`,
   transform: `scale(${pos.value.scale})`,
@@ -282,10 +282,10 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 8px;
   padding: 8px 10px 10px;
-  border: 1px solid rgba(90, 196, 255, 0.38);
+  border: 1px solid rgba(90, 196, 255, 0.28);
   background:
     linear-gradient(90deg, var(--accent), transparent 42%) top / 100% 2px no-repeat,
-    rgba(4, 16, 32, 0.42);
+    #06182e;
 }
 
 .rail {
@@ -326,8 +326,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 6px;
   padding: 8px 14px 8px;
-  background: rgba(6, 28, 52, 0.5);
-  border: 1px solid rgba(90, 196, 255, 0.2);
+  background: #06182e;
+  border: 1px solid rgba(90, 196, 255, 0.22);
 }
 .bay header { display: flex; align-items: center; gap: 8px; }
 .bay header b { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: #c5e6f5; }
