@@ -3,12 +3,44 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClock } from '@/composables/useClock';
 import { useEnergy } from '@/composables/useEnergy';
+import { EmsApi } from '@/core/api';
+import { clearSession, currentUser } from '@/core/session';
 
 const { time, date } = useClock();
-const { state, soundOn } = useEnergy();
+const { state, soundOn, online, lastError, pollSec } = useEnergy();
 const isFull = ref(false);
 
+// 当前登录用户：字段以登录接口返回的 userInfo 为准
+const user = computed(() => currentUser());
+const userName = computed(() => user.value?.userName || user.value?.userCode || '未登录');
+const userCode = computed(() => user.value?.userCode ?? '');
+const signingOut = ref(false);
+
+async function signOut() {
+  if (signingOut.value) return;
+  signingOut.value = true;
+  try {
+    await EmsApi.logout();
+  } catch {
+    // 后端不可达时也要完成本地登出
+  } finally {
+    signingOut.value = false;
+  }
+  clearSession();
+  router.replace({ name: 'login' });
+}
+
 const alarm = computed(() => state.value.backflow.active);
+
+// 数据链路状态：接口不可达时明确提示，避免值班员误以为画面是实时的。
+const linkDown = computed(() => !!lastError.value);
+const linkText = computed(() => (linkDown.value ? '接口异常' : online.value ? '数据实时' : '连接中'));
+const linkCls = computed(() => (linkDown.value ? 'is-alarm' : online.value ? '' : 'is-wait'));
+const linkHint = computed(() => {
+  if (lastError.value) return `接口异常：${lastError.value}`;
+  if (online.value) return '已接入后端实时数据';
+  return '正在连接后端服务…';
+});
 
 function toggleFull() {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
@@ -36,7 +68,14 @@ const router = useRouter();
         <span class="sep" />
         <span class="stat"><span class="label">在线电表</span><span class="num text-slate-100 text-[16px]">5/5</span></span>
         <span class="sep" />
-        <span class="stat"><span class="label">刷新周期</span><span class="num text-slate-100 text-[16px]">2s</span></span>
+        <el-tooltip :content="linkHint" placement="bottom">
+          <span class="stat">
+            <span class="dot" :class="linkCls" />
+            <span :class="linkDown ? 'text-red-400 font-semibold' : 'text-emerald-400 font-medium'">{{ linkText }}</span>
+          </span>
+        </el-tooltip>
+        <span class="sep" />
+        <span class="stat"><span class="label">刷新周期</span><span class="num text-slate-100 text-[16px]">{{ pollSec }}s</span></span>
       </div>
     </div>
 
@@ -56,6 +95,14 @@ const router = useRouter();
       </div>
       <el-tooltip :content="isFull ? '退出全屏' : '全屏'" placement="bottom">
         <button class="hbtn !px-0 w-[38px] justify-center" @click="toggleFull"><i :class="isFull ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'" /></button>
+      </el-tooltip>
+      <div class="pill !gap-2.5">
+        <i class="ri-user-3-line text-cyan-300" />
+        <span class="text-slate-100 font-medium">{{ userName }}</span>
+        <span v-if="userCode" class="text-[12px] text-slate-400">{{ userCode }}</span>
+      </div>
+      <el-tooltip content="退出登录" placement="bottom">
+        <button class="hbtn !px-0 w-[38px] justify-center" @click="signOut"><i class="ri-logout-box-r-line" /></button>
       </el-tooltip>
     </div>
   </header>
@@ -145,6 +192,17 @@ const router = useRouter();
 .dot.is-alarm::after {
   color: rgba(220, 38, 38, 0.4);
   animation-duration: 0.8s;
+}
+
+/* 连接中：琥珀色，区别于正常绿与告警红 */
+.dot.is-wait {
+  background: #f5c15a;
+  box-shadow: 0 0 8px rgba(245, 193, 90, 0.8);
+}
+
+.dot.is-wait::after {
+  color: rgba(245, 193, 90, 0.45);
+  animation-duration: 1s;
 }
 
 .title {

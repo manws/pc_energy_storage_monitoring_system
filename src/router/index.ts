@@ -8,6 +8,7 @@ import DeviceInfoView from '@/views/DeviceInfoView.vue';
 import ConfigView from '@/views/ConfigView.vue';
 import AlarmListView from '@/views/AlarmListView.vue';
 import UserListView from '@/views/UserListView.vue';
+import { hasSession } from '@/core/session';
 
 export interface DeskMenu {
   name: string;
@@ -31,17 +32,6 @@ const deskPages: DeskPage[] = [
 export const deskMenus: DeskMenu[] = deskPages.map(({ name, label, title }) => ({ name, label, title }));
 
 const [entry, ...rest] = deskPages;
-
-const SEAT_KEY = 'manws-seat';
-
-function currentSeat() {
-  const session = sessionStorage.getItem(SEAT_KEY);
-  if (session) return session;
-  const saved = localStorage.getItem(SEAT_KEY);
-  if (!saved) return '';
-  sessionStorage.setItem(SEAT_KEY, saved);
-  return saved;
-}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -73,7 +63,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  const signedIn = !!currentSeat();
+  const signedIn = hasSession();
   if (to.name === 'login') return signedIn ? { name: 'home' } : true;
   if (!signedIn) {
     const redirect = to.fullPath === '/' ? undefined : to.fullPath;

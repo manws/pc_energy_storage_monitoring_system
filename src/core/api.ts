@@ -4,6 +4,8 @@
 // 开发环境经由 vite proxy 将 /api 转发到 http://8.140.182.55:26029。
 // 生产环境可通过 VITE_API_BASE 指定后端地址（留空则走同源 /api，需部署侧反代）。
 
+import { authToken } from './session';
+
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 
 export interface ApiEnvelope<T> {
@@ -23,9 +25,14 @@ export class ApiError extends Error {
 
 /** 统一 POST 请求。返回 result 负载；非 200 业务码抛 ApiError。 */
 export async function apiPost<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const token = authToken();
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // 登录后携带 JWT；未登录（登录接口本身）不带
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
     body: JSON.stringify(body ?? {}),
     signal
   });
@@ -185,6 +192,32 @@ export interface RawUserPageData {
   page: RawPage;
 }
 
+/** 登录请求体（BLoginModel）：先验签名、后验账号密码。 */
+export interface BLoginModel {
+  userCode: string;
+  userPwd: string;
+  /** 秒级时间戳 */
+  loginOn: number;
+  /** md5(`userCode=${userCode}&&userPwd=${userPwd}&&loginOn=${loginOn}&&key=${KEY}`) */
+  sign: string;
+}
+
+/** 登录返回的用户信息：字段与列表接口不同（userId 而非 id，且不带 enabled/userPwd，另有 token）。 */
+export interface RawLoginUser {
+  userId: number;
+  usergroupId?: number;
+  userCode: string;
+  userName?: string;
+  phone?: string;
+  email?: string;
+  /** JWT，登录成功后签发 */
+  token?: string;
+}
+
+export interface RawLoginResult {
+  userInfo: RawLoginUser | null;
+}
+
 export interface RawMeterConfig {
   Name: string; Index: number; Ip: string; Port: number;
   SlaveId: number; StartAddr: number; RegisterCount: number;
@@ -249,6 +282,12 @@ export interface RawParamData {
 // ========================= 接口方法 =========================
 
 export const EmsApi = {
+  /** 登录。签名错误抛 255，账号密码错误抛 256。 */
+  login: (body: BLoginModel, signal?: AbortSignal) =>
+    apiPost<RawLoginResult>('/api/v1/User/login', body, signal),
+
+  logout: (signal?: AbortSignal) => apiPost<null>('/api/v1/User/logout', {}, signal),
+
   workSpaceNameList: (signal?: AbortSignal) =>
     apiPost<string[]>('/api/v1/WorkSpace/workSpaceNameList', {}, signal),
 

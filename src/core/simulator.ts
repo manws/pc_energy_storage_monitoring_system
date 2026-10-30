@@ -5,6 +5,7 @@ import type {
   AlarmLevel, CabId, CabPhase, EnergyState, MeterId, MeterReading, PcsChannel
 } from './types';
 import { clamp, fmtTime, rand } from './utils';
+import { currentUser } from './session';
 
 interface CabCfg { period: number; chg: number; dis: number; offset: number }
 
@@ -297,7 +298,7 @@ export function createSimulator(): Simulator {
     },
     ack() {
       state.backflow.acked = true;
-      pushAlarm('info', '值班员', '已确认市电逆流告警', Date.now());
+      pushAlarm('info', currentUser()?.userName || '值班员', '已确认市电逆流告警', Date.now());
     }
   };
 }

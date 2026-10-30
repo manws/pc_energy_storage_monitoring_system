@@ -45,6 +45,27 @@ function readingOf(m: RawBigScreen['bigScreen']['MeterCity'] | undefined): Meter
   };
 }
 
+type PowerDir = 'chg' | 'dis' | 'rest';
+
+/**
+ * 由工步名判定充放电方向。
+ * 后端功率符号约定与前端不一致（实测：恒功率放电时 WorkKW 为正，而前端约定放电为负），
+ * 因此统一以工步名为准，避免把放电显示成充电。
+ */
+function dirOf(step: string): PowerDir {
+  if (!step) return 'rest';
+  if (step.includes('放电')) return 'dis';
+  if (step.includes('充电')) return 'chg';
+  return 'rest';
+}
+
+/** 按方向统一功率符号：放电为负、充电为正（与前端既有约定一致）。 */
+function signed(v: number, dir: PowerDir): number {
+  if (dir === 'dis') return -Math.abs(v);
+  if (dir === 'chg') return Math.abs(v);
+  return v;
+}
+
 function statusOf(raw: RawChannelData): PcsChannel['status'] {
   const n = raw.nCurrentState;
   const name = raw.CurrentStateName || '';
@@ -54,7 +75,8 @@ function statusOf(raw: RawChannelData): PcsChannel['status'] {
 }
 
 function channelOf(raw: RawChannelData, no: number): PcsChannel {
-  const power = num(raw.WorkKW);
+  // 方向以工步名为准，功率符号按前端约定归一化（放电为负）。
+  const power = signed(num(raw.WorkKW), dirOf(raw.StepName || ''));
   const dcErr = (raw.DCDCErr || '').trim();
   return {
     no,
@@ -158,7 +180,8 @@ export function mapParamToWorkspace(raw: RawParamData, id: string): WorkspaceCfg
   const protocol: ProtocolRow[] = [];
   let no = 0;
   for (const grp of p.BMSProtocolList ?? []) {
-    const canHex = `04${num(grp.CanId).toString(16).toUpperCase().padStart(6, '0').slice(-6)}`;
+    // CanId 为十进制，统一按 8 位十六进制展示（如 67338240 -> 04038000）。
+    const canHex = num(grp.CanId).toString(16).toUpperCase().padStart(8, '0');
     const signals = (grp.signelProtocolList ?? []) as Array<Record<string, unknown>>;
     for (const s of signals) {
       no += 1;
@@ -294,11 +317,15 @@ export function mapToEnergyState(b: RealtimeBundle, prev?: EnergyState): EnergyS
   const bms = bmsOf(devices[0]?.BMSData);
 
   // 功率总览
+  // 储能总功率方向与首通道工步保持一致（通道已按工步归一化为放电为负）。
+  const essDir = dirOf(
+    devices[0]?.ChannelData?.StepName || bs.ChannelDataList?.[0]?.StepName || ''
+  );
   const essP = pcs[0].power + pcs[1].power;
   const power = {
     base: 0,
     grid: num(bs.PsCity),
-    ess: num(bs.PsDevice) || essP,
+    ess: signed(num(bs.PsDevice) || essP, essDir),
     cab1: num(bs.MeterCabinet1?.Ps),
     cab2: num(bs.MeterCabinet2?.Ps),
     cab3: num(bs.MeterCabinet3?.Ps)

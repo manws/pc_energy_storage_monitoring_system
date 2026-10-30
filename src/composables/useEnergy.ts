@@ -20,16 +20,24 @@ const soundOn = ref(false);
 const online = ref(false); // 是否已成功接入真实数据
 const lastError = ref('');
 
+const MOCK_STEP_MS = 2000;
+
 let timer: number | undefined;
+let demoTimer: number | undefined;
 let dirty = false;
 let fetching = false;
 let controller: AbortController | undefined;
-let demoUntil = 0; // 逆流演练期间暂停真实数据覆盖，优先展示演练效果
 
 function publish(): void {
   triggerRef(state);
   version.value++;
   dirty = false;
+}
+
+/** 结束逆流演练，恢复接口轮询。 */
+function stopDemo(): void {
+  if (demoTimer !== undefined) window.clearInterval(demoTimer);
+  demoTimer = undefined;
 }
 
 function commit(next: EnergyState): void {
@@ -56,7 +64,6 @@ async function pullReal(): Promise<void> {
     const next = mapToEnergyState({ device, meter, bigScreen, current }, state.value);
     online.value = true;
     lastError.value = '';
-    if (Date.now() < demoUntil) return; // 演练中不覆盖
     commit(next);
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') return;
@@ -81,6 +88,8 @@ function tick(): void {
     tickMock();
     return;
   }
+  // 逆流演练期间由演练定时器驱动模拟器，不打断演练画面。
+  if (demoTimer !== undefined) return;
   void pullReal();
 }
 
@@ -91,13 +100,14 @@ function onVisibility(): void {
 export function startEnergyLoop(): void {
   if (timer !== undefined) return;
   tick(); // 立即拉取一次
-  timer = window.setInterval(tick, USE_MOCK ? 2000 : POLL_MS);
+  timer = window.setInterval(tick, USE_MOCK ? MOCK_STEP_MS : POLL_MS);
   document.addEventListener('visibilitychange', onVisibility);
 }
 
 export function stopEnergyLoop(): void {
   if (timer !== undefined) window.clearInterval(timer);
   timer = undefined;
+  stopDemo();
   controller?.abort();
   document.removeEventListener('visibilitychange', onVisibility);
 }
@@ -109,13 +119,25 @@ export function useEnergy() {
     soundOn,
     online,
     lastError,
+    /** 当前数据刷新周期（秒），用于页头展示。 */
+    pollSec: USE_MOCK ? MOCK_STEP_MS / 1000 : POLL_MS / 1000,
     simulateBackflow(seconds = 20) {
-      // 逆流演练基于本地模拟器，演练结束后自动恢复真实数据。
-      demoUntil = Date.now() + seconds * 1000 + 1500;
+      // 逆流演练基于本地模拟器：演练期间以 2s 步进推进画面，结束后自动恢复接口数据。
+      const until = Date.now() + seconds * 1000 + 1500;
       sim.simulateBackflow(seconds);
       sim.step(Date.now());
       state.value = markRaw(sim.state);
       publish();
+      stopDemo();
+      demoTimer = window.setInterval(() => {
+        if (Date.now() >= until) {
+          stopDemo();
+          void pullReal();
+          return;
+        }
+        sim.step(Date.now());
+        publish();
+      }, MOCK_STEP_MS);
     },
     ack() {
       sim.ack();

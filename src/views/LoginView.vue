@@ -2,6 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClock } from '@/composables/useClock';
+import { ApiError, EmsApi } from '@/core/api';
+import { signLogin } from '@/core/auth';
+import { saveSession } from '@/core/session';
 import core from '@/assets/login/monitor/core.png';
 import corners from '@/assets/login/monitor/corners.svg';
 import plantScene from '@/assets/login/monitor/plant.png';
@@ -10,16 +13,6 @@ import deviceScene from '@/assets/login/monitor/device.png';
 import linkPlant from '@/assets/login/monitor/link-plant.svg';
 import linkStorage from '@/assets/login/monitor/link-storage.svg';
 import linkTest from '@/assets/login/monitor/link-test.svg';
-
-const SEAT_KEY = 'manws-seat';
-
-const SEATS = [
-  { login: 'chief', name: '值班长', active: true },
-  { login: 'monitor1', name: '监控一席', active: true },
-  { login: 'monitor2', name: '监控二席', active: true },
-  { login: '123456', name: '123456', active: true },
-  { login: 'ops', name: '运维席', active: false }
-];
 
 const scenes = [
   { name: '厂区监控', image: plantScene, alt: '厂区监控' },
@@ -36,6 +29,7 @@ const remember = ref(true);
 const showPassword = ref(false);
 const notice = ref('');
 const noticeError = ref(false);
+const loading = ref(false);
 const scale = ref(1);
 const offsetX = ref(0);
 const offsetY = ref(0);
@@ -64,37 +58,47 @@ function showHelp() {
   showNotice('请联系厂区系统管理员激活值班账号。', false);
 }
 
-function inputValue(id: string, fallback: string) {
-  const node = document.getElementById(id);
-  if (node instanceof HTMLInputElement && node.value) return node.value;
-  return fallback;
+/** 把后端业务码翻译成页面提示。 */
+function describeLoginError(err: unknown) {
+  if (err instanceof ApiError) {
+    if (err.code === 255) return '登录失败：签名校验不通过（key 与后端不一致）';
+    if (err.code === 256) return '登录名称或密码不正确，或该账号已失效';
+    return err.message || `登录失败（${err.code}）`;
+  }
+  return '无法连接后端服务，请检查网络后重试';
 }
 
-function submit() {
-  const name = inputValue('username', login.value).trim();
-  const secret = inputValue('password', password.value).trim();
+async function submit() {
+  if (loading.value) return;
+  const name = login.value.trim();
+  const secret = password.value.trim();
   if (!name || !secret) {
     showNotice('请填写登录名称和密码', true);
     return;
   }
-  const seat = SEATS.find((item) => item.login === name);
-  if (!seat || secret !== name) {
-    showNotice('登录名称或密码不正确', true);
-    return;
-  }
-  if (!seat.active) {
-    showNotice('该账号未激活', true);
-    return;
-  }
+
+  loading.value = true;
+  showNotice('', false);
   try {
-    sessionStorage.setItem(SEAT_KEY, seat.login);
-    if (remember.value) localStorage.setItem(SEAT_KEY, seat.login);
-    else localStorage.removeItem(SEAT_KEY);
-  } catch {
-    showNotice('浏览器阻止了登录状态保存', true);
-    return;
+    const { userInfo } = await EmsApi.login(signLogin(name, secret));
+    // 登录接口只返回有效账号，且不含 enabled 字段，账号状态由后端校验，这里不再判断。
+    if (!userInfo || !userInfo.userCode) {
+      showNotice('登录失败：服务端未返回用户信息', true);
+      return;
+    }
+    try {
+      // 登录返回的 userInfo（含 token）整体落地，后续页面统一从会话读取
+      saveSession(userInfo, remember.value);
+    } catch {
+      showNotice('浏览器阻止了登录状态保存', true);
+      return;
+    }
+    router.replace({ name: 'home' });
+  } catch (err) {
+    showNotice(describeLoginError(err), true);
+  } finally {
+    loading.value = false;
   }
-  router.replace({ name: 'home' });
 }
 
 onMounted(() => {
@@ -238,7 +242,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
             <a class="help-link" href="#help" @click.prevent="showHelp"></a>
           </div>
 
-          <button class="primary-btn" type="submit">进入系统</button>
+          <button class="primary-btn" type="submit" :disabled="loading">
+            {{ loading ? '登录中…' : '进入系统' }}
+          </button>
           <p v-if="notice" class="notice" :class="{ error: noticeError }" role="status">{{ notice }}</p>
         </form>
       </section>
@@ -708,6 +714,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure));
 }
 .primary-btn:hover { filter: brightness(1.06); }
 .primary-btn:active { transform: translateY(1px); }
+.primary-btn:disabled { cursor: progress; filter: saturate(0.55) brightness(0.9); }
 .notice { margin: -8px 0 0; font-size: 14px; line-height: 22px; color: var(--cyan); }
 .notice.error { color: #ffb1bd; }
 
