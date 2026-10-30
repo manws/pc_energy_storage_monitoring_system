@@ -30,7 +30,7 @@ export function parseTime(s: string | null | undefined): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-function emptyReading(): MeterReading {
+export function emptyReading(): MeterReading {
   return { ua: 0, ub: 0, uc: 0, uab: 0, ubc: 0, uca: 0, ia: 0, ib: 0, ic: 0, pa: 0, pb: 0, pc: 0, ps: 0 };
 }
 
@@ -97,7 +97,7 @@ function channelOf(raw: RawChannelData, no: number): PcsChannel {
   };
 }
 
-function emptyChannel(no: number): PcsChannel {
+export function emptyChannel(no: number): PcsChannel {
   return {
     no, time: '--', voltage: 0, current: 0, power: 0,
     chgAh: 0, disAh: 0, chgWh: 0, disWh: 0,

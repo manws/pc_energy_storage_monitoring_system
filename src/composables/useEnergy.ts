@@ -1,29 +1,54 @@
 import { markRaw, ref, shallowRef, triggerRef } from 'vue';
 import { ESS_REFRESH_MS } from '@/core/constants';
-import { createSimulator } from '@/core/simulator';
 import type { EnergyState } from '@/core/types';
 import { EmsApi } from '@/core/api';
-import { mapToEnergyState } from '@/core/apiMapper';
+import { emptyChannel, emptyReading, mapToEnergyState } from '@/core/apiMapper';
 
-// 数据来源：
-// - 真实接口（默认）：每 ESS_REFRESH_MS 拉取 Device/Meter/BigScreen/Event 并映射为 EnergyState。
-// - 模拟器兜底：VITE_USE_MOCK=1 时，或首个接口周期尚未返回/接口不可用时使用，避免白屏。
-// 逆流演练（simulateBackflow）始终走本地模拟器，不依赖后端写能力。
+// 数据来源：仅真实接口。每 ESS_REFRESH_MS 拉取 Device/Meter/BigScreen/Event 并映射为 EnergyState。
+// 首次返回前 state 为空态（组件呈现「连接中/空数据」），接口失败维持上一次真实数据并提示「接口异常」，
+// 不使用任何模拟数据。
 
-const USE_MOCK = (import.meta.env.VITE_USE_MOCK as string | undefined) === '1';
 const POLL_MS = ESS_REFRESH_MS;
 
-const sim = createSimulator();
-const state = shallowRef<EnergyState>(markRaw(sim.state));
+/** 空态：接口返回前的占位，不包含任何假数据。 */
+function emptyState(): EnergyState {
+  const meters: EnergyState['meters'] = {
+    grid: emptyReading(), ess: emptyReading(), cab1: emptyReading(), cab2: emptyReading(), cab3: emptyReading()
+  };
+  return {
+    ts: 0,
+    power: { base: 0, grid: 0, ess: 0, cab1: 0, cab2: 0, cab3: 0 },
+    meters,
+    history: { grid: [], ess: [], cab1: [], cab2: [], cab3: [] },
+    pcsHistory: [[], []],
+    socHistory: [],
+    pcs: [emptyChannel(1), emptyChannel(2)],
+    bms: {
+      soc: 0, totalV: 0, totalI: 0,
+      maxCellV: 0, maxCellNo: 1, minCellV: 0, minCellNo: 1,
+      maxT: 0, maxTNo: 1, minT: 0, minTNo: 1,
+      tempBase: 0, cells: [], temps: []
+    },
+    cabPhase: { cab1: 'rest', cab2: 'rest', cab3: 'rest' },
+    essLimited: false,
+    essStep: 1,
+    energy: {
+      grid: { imp: 0, exp: 0 }, ess: { imp: 0, exp: 0 },
+      cab1: { imp: 0, exp: 0 }, cab2: { imp: 0, exp: 0 }, cab3: { imp: 0, exp: 0 }
+    },
+    backflow: { active: false, since: 0, count: 0, totalSec: 0, peak: 0, lastAt: 0, acked: false },
+    alarms: [],
+    alarmCountToday: 0
+  };
+}
+
+const state = shallowRef<EnergyState>(markRaw(emptyState()));
 const version = ref(0);
 const soundOn = ref(false);
 const online = ref(false); // 是否已成功接入真实数据
 const lastError = ref('');
 
-const MOCK_STEP_MS = 2000;
-
 let timer: number | undefined;
-let demoTimer: number | undefined;
 let dirty = false;
 let fetching = false;
 let controller: AbortController | undefined;
@@ -32,12 +57,6 @@ function publish(): void {
   triggerRef(state);
   version.value++;
   dirty = false;
-}
-
-/** 结束逆流演练，恢复接口轮询。 */
-function stopDemo(): void {
-  if (demoTimer !== undefined) window.clearInterval(demoTimer);
-  demoTimer = undefined;
 }
 
 function commit(next: EnergyState): void {
@@ -68,28 +87,13 @@ async function pullReal(): Promise<void> {
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') return;
     lastError.value = e instanceof Error ? e.message : String(e);
-    // 首个周期失败时保持模拟器数据展示，不清空界面。
+    // 失败时保留上一次真实数据；首次失败则维持空态，页面显示「接口异常」。
   } finally {
     fetching = false;
   }
 }
 
-function tickMock(): void {
-  sim.step(Date.now());
-  if (document.hidden) {
-    dirty = true;
-    return;
-  }
-  publish();
-}
-
 function tick(): void {
-  if (USE_MOCK) {
-    tickMock();
-    return;
-  }
-  // 逆流演练期间由演练定时器驱动模拟器，不打断演练画面。
-  if (demoTimer !== undefined) return;
   void pullReal();
 }
 
@@ -100,14 +104,13 @@ function onVisibility(): void {
 export function startEnergyLoop(): void {
   if (timer !== undefined) return;
   tick(); // 立即拉取一次
-  timer = window.setInterval(tick, USE_MOCK ? MOCK_STEP_MS : POLL_MS);
+  timer = window.setInterval(tick, POLL_MS);
   document.addEventListener('visibilitychange', onVisibility);
 }
 
 export function stopEnergyLoop(): void {
   if (timer !== undefined) window.clearInterval(timer);
   timer = undefined;
-  stopDemo();
   controller?.abort();
   document.removeEventListener('visibilitychange', onVisibility);
 }
@@ -120,27 +123,9 @@ export function useEnergy() {
     online,
     lastError,
     /** 当前数据刷新周期（秒），用于页头展示。 */
-    pollSec: USE_MOCK ? MOCK_STEP_MS / 1000 : POLL_MS / 1000,
-    simulateBackflow(seconds = 20) {
-      // 逆流演练基于本地模拟器：演练期间以 2s 步进推进画面，结束后自动恢复接口数据。
-      const until = Date.now() + seconds * 1000 + 1500;
-      sim.simulateBackflow(seconds);
-      sim.step(Date.now());
-      state.value = markRaw(sim.state);
-      publish();
-      stopDemo();
-      demoTimer = window.setInterval(() => {
-        if (Date.now() >= until) {
-          stopDemo();
-          void pullReal();
-          return;
-        }
-        sim.step(Date.now());
-        publish();
-      }, MOCK_STEP_MS);
-    },
+    pollSec: POLL_MS / 1000,
+    /** 确认当前逆流告警（仅本地标记，不涉及模拟数据）。 */
     ack() {
-      sim.ack();
       state.value.backflow.acked = true;
       publish();
     }

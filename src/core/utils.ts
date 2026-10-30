@@ -1,5 +1,3 @@
-export const rand = (a: number, b: number): number => a + Math.random() * (b - a);
-
 export const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 
 export const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);

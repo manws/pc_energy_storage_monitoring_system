@@ -132,7 +132,7 @@ body,
 }
 
 .desk-field .el-input__wrapper.is-focus,
-.desk-field .el-input__wrapper:hover {
+.desk-field:not(.is-disabled) .el-input__wrapper:hover {
   box-shadow: 0 0 0 1px #7ee7ff inset;
 }
 
@@ -145,6 +145,23 @@ body,
 .desk-field .el-input__suffix,
 .desk-field .el-input__icon {
   color: #9fd0e6;
+}
+
+/* 禁用态：保持深色主题，避免回退到 EP 默认的白底灰字 */
+.desk-field.is-disabled .el-input__wrapper {
+  background: rgba(6, 28, 52, 0.45);
+  box-shadow: 0 0 0 1px rgba(90, 196, 255, 0.18) inset;
+  cursor: not-allowed;
+}
+
+.desk-field.is-disabled .el-input__inner {
+  color: #7eb4cc;
+  -webkit-text-fill-color: #7eb4cc;
+  cursor: not-allowed;
+}
+
+.desk-field.is-disabled .el-input__inner::placeholder {
+  color: #517a94;
 }
 
 .desk-select.el-popper {

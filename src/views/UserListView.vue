@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { EmsApi } from '@/core/api';
 import type { RawUser } from '@/core/api';
+import ListPager from '@/components/ListPager.vue';
 
 interface UserRow {
   id: number;
