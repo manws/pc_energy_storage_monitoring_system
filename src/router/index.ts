@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import LoginView from '@/views/LoginView.vue';
+import EnergyLoginView from '@/views/EnergyLoginView.vue';
 import { startEnergyLoop, stopEnergyLoop } from '@/composables/useEnergy';
 import DeskView from '@/views/DeskView.vue';
 import MeterDataView from '@/views/MeterDataView.vue';
@@ -9,6 +10,9 @@ import ConfigView from '@/views/ConfigView.vue';
 import AlarmListView from '@/views/AlarmListView.vue';
 import UserListView from '@/views/UserListView.vue';
 import { hasSession } from '@/core/session';
+
+// true：旧版登录页；false：新版登录页。
+const USE_LEGACY_LOGIN: boolean = false;
 
 export interface DeskMenu {
   name: string;
@@ -36,7 +40,7 @@ const [entry, ...rest] = deskPages;
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/login', name: 'login', component: LoginView },
+    { path: '/login', name: 'login', component: USE_LEGACY_LOGIN ? LoginView : EnergyLoginView },
     { path: '/', name: 'home', component: HomeView },
     {
       path: `/${entry.name}`,
