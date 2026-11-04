@@ -4,14 +4,14 @@ import { useRouter } from 'vue-router';
 import { useClock } from '@/composables/useClock';
 import { useEnergy } from '@/composables/useEnergy';
 import { EmsApi } from '@/core/api';
-import { clearSession, currentUser } from '@/core/session';
+import { clearSession, useSessionUser } from '@/core/session';
 
 const { time, date } = useClock();
 const { state, soundOn, online, lastError, pollSec } = useEnergy();
 const isFull = ref(false);
 
 // 当前登录用户：字段以登录接口返回的 userInfo 为准
-const user = computed(() => currentUser());
+const user = useSessionUser();
 const userName = computed(() => user.value?.userName || user.value?.userCode || '未登录');
 const userCode = computed(() => user.value?.userCode ?? '');
 const signingOut = ref(false);

@@ -7,7 +7,7 @@ import { emptyChannel, emptyReading, mapBigScreen, mapDevice, mapMeter } from '@
 // 按页面拉对应接口，避免大屏/电表/储能互相拖累：
 // - 大屏只调 bigScreen
 // - 电表页只调 meterData，2s 刷新
-// - 储能监控只调 deviceData
+// - 储能监控进入时调一次 deviceData，不轮询
 // 首次返回前 state 为空态，接口失败维持上一次真实数据并提示「接口异常」。
 
 export type EnergyScope = 'screen' | 'meter' | 'device' | 'idle';
@@ -62,7 +62,9 @@ let scope: EnergyScope = 'idle';
 const pollMs = ref(SCREEN_POLL_MS);
 
 function intervalOf(next: EnergyScope): number {
-  return next === 'meter' ? METER_POLL_MS : SCREEN_POLL_MS;
+  if (next === 'meter') return METER_POLL_MS;
+  if (next === 'device') return 0;
+  return SCREEN_POLL_MS;
 }
 
 function publish(): void {
@@ -125,6 +127,7 @@ function armTimer(ms: number): void {
   clearTimer();
   if (scope === 'idle') return;
   tick();
+  if (ms <= 0) return;
   timer = window.setInterval(tick, ms);
 }
 

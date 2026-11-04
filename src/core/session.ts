@@ -1,4 +1,5 @@
 // 登录态：登录接口返回的用户信息 + JWT token 的本地存取
+import { computed, shallowRef } from 'vue';
 import type { RawLoginUser } from './api';
 
 /** 当前登录用户，字段完全以登录接口返回的 userInfo 为准。 */
@@ -12,6 +13,32 @@ export interface Session {
 
 const SESSION_KEY = 'manws-session';
 const TOKEN_KEY = 'manws-token';
+const sessionUser = shallowRef<CurrentUser | null>(null);
+let groupSynced = false;
+
+/** 0 是管理员，不能当假值丢掉。只认 0 / 1，以及同义字段名。 */
+export function userGroupId(user: object | null | undefined): number | null {
+  if (!user) return null;
+  const rec = user as Record<string, unknown>;
+  for (const raw of [rec.usergroupId, rec.userGroupId, rec.UserGroupId]) {
+    if (raw === 0 || raw === 1) return raw;
+    if (raw === '0' || raw === '1') return Number(raw);
+  }
+  return null;
+}
+
+function rememberFlag(): boolean {
+  try {
+    return !!localStorage.getItem(SESSION_KEY);
+  } catch {
+    return false;
+  }
+}
+
+function withGroup(user: CurrentUser): CurrentUser {
+  const group = userGroupId(user);
+  return group == null ? user : { ...user, usergroupId: group };
+}
 
 function readStored(key: string): string {
   try {
@@ -46,9 +73,11 @@ function clearStored(): void {
 
 /** 登录成功后写入用户信息与 token。 */
 export function saveSession(user: CurrentUser, remember: boolean): void {
-  const session: Session = { user, loginAt: Date.now() };
+  const next = withGroup(user);
+  const session: Session = { user: next, loginAt: Date.now() };
   writeStored(SESSION_KEY, JSON.stringify(session), remember);
-  writeStored(TOKEN_KEY, user.token ?? '', remember);
+  writeStored(TOKEN_KEY, next.token ?? '', remember);
+  sessionUser.value = next;
 }
 
 export function readSession(): Session | null {
@@ -56,20 +85,44 @@ export function readSession(): Session | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Session;
-    return parsed?.user?.userCode ? parsed : null;
+    if (!parsed?.user?.userCode) return null;
+    parsed.user = withGroup(parsed.user);
+    return parsed;
   } catch {
     return null;
   }
 }
 
+sessionUser.value = readSession()?.user ?? null;
+
 /** 当前登录用户；未登录返回 null。 */
 export function currentUser(): CurrentUser | null {
-  return readSession()?.user ?? null;
+  return sessionUser.value;
 }
 
-/** 登录返回的 usergroupId：0 管理员，1 值班人员。 */
+export function useSessionUser() {
+  return computed(() => sessionUser.value);
+}
+
+/** 登录返回的 usergroupId：0 管理员，1 值班人员。0 必须按数字比较，不能当假值。 */
 export function isDutyUser(user: CurrentUser | null = currentUser()): boolean {
-  return user?.usergroupId === 1;
+  return userGroupId(user) === 1;
+}
+
+/** 刷新后按后台用户详情校正用户组，避免本地会话把 0 弄丢。 */
+export async function syncUserGroup(): Promise<void> {
+  const user = sessionUser.value;
+  if (groupSynced || !user?.userId) return;
+  groupSynced = true;
+  try {
+    const { EmsApi } = await import('./api');
+    const res = await EmsApi.userSingle(user.userId);
+    const group = userGroupId(res?.userInfo);
+    if (group == null || group === userGroupId(user)) return;
+    saveSession({ ...user, usergroupId: group }, rememberFlag());
+  } catch {
+    /* 校正失败时沿用本地会话 */
+  }
 }
 
 /** 当前 token，用于请求头 Authorization。 */
@@ -83,4 +136,6 @@ export function hasSession(): boolean {
 
 export function clearSession(): void {
   clearStored();
+  sessionUser.value = null;
+  groupSynced = false;
 }

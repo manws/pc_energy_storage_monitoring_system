@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useEnergy } from '@/composables/useEnergy';
-import { ESS_REFRESH_MS } from '@/core/constants';
+import { parseTime } from '@/core/apiMapper';
 import { fmt, isFaultStatus, isWorkingStatus } from '@/core/utils';
 import type { PcsChannel } from '@/core/types';
 import PcsPowerChart from '@/components/PcsPowerChart.vue';
 
-const { state } = useEnergy();
+const { state, version } = useEnergy();
 const RANGE_MS = 15 * 60 * 1000;
+const BMS_COMM_MS = 10 * 1000;
 const PANEL_W = 420;
 const PANEL_H = 440;
 
@@ -42,6 +43,16 @@ function bmsText(v: unknown, d?: number): string {
   if (d == null) return String(v);
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(d) : String(v);
+}
+
+/** 进入页时 BMSData.TimeValue 为空，或当前时间比它早超过 10 秒，视为通信故障。 */
+function bmsComm(timeValue: unknown, now = Date.now()): { status: string; statusCls: string } {
+  const raw = timeValue == null ? '' : String(timeValue).trim();
+  const ts = parseTime(raw);
+  const fault = !raw || !ts || now - ts > BMS_COMM_MS;
+  return fault
+    ? { status: '通信故障', statusCls: 'bad' }
+    : { status: '通信正常', statusCls: 'ok' };
 }
 
 function pcsRows(ch: PcsChannel): Row[] {
@@ -120,7 +131,7 @@ function capture() {
       pcs: pcsRows(ch),
       curve: curveOf(i, s.ts),
       bms: {
-        time: bmsText(raw?.TimeValue),
+        ...bmsComm(raw?.TimeValue),
         voltage: bmsText(raw?.Vol, 1),
         current: bmsText(raw?.Cur, 1),
         soc: bmsText(raw?.SOC, 1),
@@ -133,6 +144,7 @@ function capture() {
 }
 
 const cards = ref(capture());
+watch(version, () => { cards.value = capture(); });
 const openKey = ref<string | null>(null);
 const pos = ref({ top: 80, left: 16, scale: 1 });
 const opened = computed(() => {
@@ -154,7 +166,6 @@ const panelStyle = computed(() => ({
   transformOrigin: 'top left',
   zIndex: '80'
 }));
-let timer = 0;
 let closeTimer = 0;
 
 function place(el: HTMLElement) {
@@ -187,12 +198,7 @@ function cancelClose() {
   window.clearTimeout(closeTimer);
 }
 
-onMounted(() => {
-  cards.value = capture();
-  timer = window.setInterval(() => { cards.value = capture(); }, ESS_REFRESH_MS);
-});
 onBeforeUnmount(() => {
-  window.clearInterval(timer);
   window.clearTimeout(closeTimer);
 });
 </script>
@@ -253,7 +259,7 @@ onBeforeUnmount(() => {
               @blur="scheduleClose"
             >详情</button>
           </header>
-          <p class="state">{{ card.bms.time }}</p>
+          <p class="state" :class="card.bms.statusCls">{{ card.bms.status }}</p>
           <dl class="facts">
             <div><dt>电压</dt><dd class="num">{{ card.bms.voltage }}<i>V</i></dd></div>
             <div><dt>电流</dt><dd class="num">{{ card.bms.current }}<i>A</i></dd></div>

@@ -9,38 +9,29 @@ import DeviceInfoView from '@/views/DeviceInfoView.vue';
 import ConfigView from '@/views/ConfigView.vue';
 import AlarmListView from '@/views/AlarmListView.vue';
 import UserListView from '@/views/UserListView.vue';
-import { currentUser, hasSession, isDutyUser } from '@/core/session';
+import { DUTY_HIDDEN, deskMenus, menusFor, type DeskMenu } from '@/core/deskNav';
+import { hasSession, isDutyUser, syncUserGroup } from '@/core/session';
+
+export type { DeskMenu };
+export { deskMenus, menusFor };
 
 // true：旧版登录页；false：新版登录页。
 const USE_LEGACY_LOGIN: boolean = false;
-
-export interface DeskMenu {
-  name: string;
-  label: string;
-  title: string;
-}
 
 interface DeskPage extends DeskMenu {
   component: RouteRecordRaw['component'];
   props?: Record<string, string>;
 }
 
-const deskPages: DeskPage[] = [
-  { name: 'meters', label: '电表数据', title: '五路有功功率', component: MeterDataView },
-  { name: 'devices', label: '储能监控', title: '储能通道监控', component: DeviceInfoView },
-  { name: 'stats', label: '告警信息', title: '告警信息', component: AlarmListView },
-  { name: 'config', label: '配置信息', title: '配置信息', component: ConfigView },
-  { name: 'users', label: '用户管理', title: '用户管理', component: UserListView }
-];
+const deskViews: Record<string, RouteRecordRaw['component']> = {
+  meters: MeterDataView,
+  devices: DeviceInfoView,
+  stats: AlarmListView,
+  config: ConfigView,
+  users: UserListView
+};
 
-export const deskMenus: DeskMenu[] = deskPages.map(({ name, label, title }) => ({ name, label, title }));
-
-const DUTY_HIDDEN = new Set(['config', 'users']);
-
-export function menusFor(user: ReturnType<typeof currentUser>): DeskMenu[] {
-  if (!isDutyUser(user)) return deskMenus;
-  return deskMenus.filter((item) => !DUTY_HIDDEN.has(item.name));
-}
+const deskPages: DeskPage[] = deskMenus.map((item) => ({ ...item, component: deskViews[item.name] }));
 
 const [entry, ...rest] = deskPages;
 
@@ -73,13 +64,15 @@ const router = createRouter({
   ]
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const signedIn = hasSession();
   if (to.name === 'login') return signedIn ? { name: 'home' } : true;
   if (!signedIn) {
     const redirect = to.fullPath === '/' ? undefined : to.fullPath;
     return { name: 'login', query: redirect ? { redirect } : {} };
   }
+  await syncUserGroup();
+  if (DUTY_HIDDEN.has(String(to.name)) && isDutyUser()) return { name: 'meters' };
   return true;
 });
 

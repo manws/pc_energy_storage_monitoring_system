@@ -2,12 +2,12 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { EmsApi } from '@/core/api';
-import { clearSession, currentUser } from '@/core/session';
-import { menusFor } from '@/router';
+import { menusFor } from '@/core/deskNav';
+import { clearSession, useSessionUser } from '@/core/session';
 
 const route = useRoute();
 const router = useRouter();
-const user = computed(() => currentUser());
+const user = useSessionUser();
 const menus = computed(() => menusFor(user.value));
 const userName = computed(() => user.value?.userName || user.value?.userCode || '未登录');
 const userCode = computed(() => user.value?.userCode ?? '');
