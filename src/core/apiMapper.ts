@@ -82,6 +82,29 @@ function statusOf(raw: RawChannelData): string {
   return CHANNEL_STATE[raw.nCurrentState] || '未知';
 }
 
+export interface ChannelIdentity {
+  channelId: string;
+  workspace: string;
+}
+
+function textId(v: unknown): string {
+  if (v == null) return '';
+  return String(v).trim();
+}
+
+function kept(next: string | undefined, prev: string | undefined): string {
+  if (next != null && next !== '') return next;
+  return prev ?? '';
+}
+
+/** deviceData 才带工作单元和 ChannelId，大屏通道列表没有这两项。 */
+export function channelIdentityOf(raw: RawDeviceData | null | undefined): ChannelIdentity[] {
+  return (raw?.deviceList ?? []).map((d) => ({
+    channelId: textId(d.ChannelId),
+    workspace: textId(d.WorkSpaceName)
+  }));
+}
+
 function channelOf(
   raw: RawChannelData,
   no: number,
@@ -320,14 +343,17 @@ function keepBackflow(prev: EnergyState | undefined, active: boolean) {
 
 const phaseOf = (p: number): CabPhase => (p > 0.5 ? 'chg' : p < -0.5 ? 'dis' : 'rest');
 
-/** 大屏：只消费 bigScreen。 */
-export function mapBigScreen(raw: RawBigScreen, prev?: EnergyState): EnergyState {
+/** 大屏实时量只消费 bigScreen。工作单元 / ChannelId 由调用方另附。 */
+export function mapBigScreen(raw: RawBigScreen, prev?: EnergyState, identity?: ChannelIdentity[]): EnergyState {
   const bs = raw.bigScreen;
   const channels = bs.ChannelDataList ?? [];
   const latest = channels[0]?.TimeValue ? parseTime(channels[0].TimeValue) : 0;
   const ts = latest || Date.now();
   const pcs = channels.length
-    ? channels.map((ch, i) => channelOf(ch, i + 1))
+    ? channels.map((ch, i) => channelOf(ch, i + 1, {
+      channelId: kept(identity?.[i]?.channelId, prev?.pcs[i]?.channelId),
+      workspace: kept(identity?.[i]?.workspace, prev?.pcs[i]?.workspace)
+    }))
     : [emptyChannel(1), emptyChannel(2)];
   const essDir = dirOf(channels[0]?.StepName || '');
   const essP = pcs.reduce((sum, ch) => sum + ch.power, 0);

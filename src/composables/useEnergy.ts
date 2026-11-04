@@ -2,10 +2,10 @@ import { computed, markRaw, ref, shallowRef, triggerRef } from 'vue';
 import { ESS_REFRESH_MS, STEP_MS } from '@/core/constants';
 import type { EnergyState } from '@/core/types';
 import { EmsApi } from '@/core/api';
-import { emptyChannel, emptyReading, mapBigScreen, mapDevice, mapMeter } from '@/core/apiMapper';
+import { channelIdentityOf, emptyChannel, emptyReading, mapBigScreen, mapDevice, mapMeter, type ChannelIdentity } from '@/core/apiMapper';
 
 // 按页面拉对应接口，避免大屏/电表/储能互相拖累：
-// - 大屏只调 bigScreen
+// - 大屏轮询 bigScreen；工作单元和 ChannelId 进页时向 deviceData 取一次，不跟着轮询、也不挡住大屏刷新
 // - 电表页只调 meterData，2s 刷新
 // - 储能监控进入时调一次 deviceData，不轮询
 // 首次返回前 state 为空态，接口失败维持上一次真实数据并提示「接口异常」。
@@ -60,6 +60,51 @@ let pullId = 0;
 let controller: AbortController | undefined;
 let scope: EnergyScope = 'idle';
 const pollMs = ref(SCREEN_POLL_MS);
+// bigScreen 的 ChannelDataList 不含工作单元和 ChannelId。
+// 进大屏取一次 deviceData；失败也不跟着 10 秒周期重试，离开页面再进才会再取。
+let screenIdentity: ChannelIdentity[] = [];
+let identityStarted = false;
+let identityController: AbortController | undefined;
+
+function cancelScreenIdentity(): void {
+  identityController?.abort();
+  identityController = undefined;
+  identityStarted = false;
+  screenIdentity = [];
+}
+
+function startScreenIdentity(): void {
+  if (identityStarted || scope !== 'screen') return;
+  identityStarted = true;
+  const controller = new AbortController();
+  identityController = controller;
+  const signal = controller.signal;
+  void EmsApi.deviceData(signal).then(
+    (raw) => {
+      if (signal.aborted || scope !== 'screen') return;
+      const nextId = channelIdentityOf(raw);
+      if (!nextId.length) return;
+      screenIdentity = nextId;
+      // 大屏还没成功过，或当前卡片还是别的页面留下的数据时，不就地改卡片。
+      // 下一次 bigScreen 映射会按通道顺序带上身份。
+      if (!online.value) return;
+      const cur = state.value;
+      if (cur.pcs.some((ch, i) => ch.no !== i + 1)) return;
+      const pcs = cur.pcs.map((ch, i) => {
+        const id = nextId[i];
+        if (!id) return ch;
+        const channelId = id.channelId || ch.channelId;
+        const workspace = id.workspace || ch.workspace;
+        if (ch.channelId === channelId && ch.workspace === workspace) return ch;
+        return { ...ch, channelId, workspace };
+      });
+      commit({ ...cur, pcs });
+    },
+    () => {
+      // 失败留到下次进入大屏再取。这里不写 lastError，避免大屏实时数据正常时被打成「接口异常」。
+    }
+  );
+}
 
 function intervalOf(next: EnergyScope): number {
   if (next === 'meter') return METER_POLL_MS;
@@ -92,7 +137,10 @@ async function pullReal(): Promise<void> {
   try {
     let next: EnergyState;
     if (currentScope === 'screen') {
-      next = mapBigScreen(await EmsApi.bigScreen(signal), state.value);
+      startScreenIdentity();
+      const screenRaw = await EmsApi.bigScreen(signal);
+      if (signal.aborted || scope !== 'screen' || id !== pullId) return;
+      next = mapBigScreen(screenRaw, state.value, screenIdentity);
     } else if (currentScope === 'meter') {
       next = mapMeter(await EmsApi.meterData(signal), state.value);
     } else {
@@ -132,6 +180,7 @@ function armTimer(ms: number): void {
 }
 
 export function setEnergyScope(next: EnergyScope): void {
+  if (scope === 'screen' && next !== 'screen') cancelScreenIdentity();
   const ms = intervalOf(next);
   const changed = scope !== next || pollMs.value !== ms;
   scope = next;
