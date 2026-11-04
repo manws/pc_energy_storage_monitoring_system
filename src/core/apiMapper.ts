@@ -300,7 +300,7 @@ function mapEventList(list: RawBigScreen['bigScreen']['EventList'] | null | unde
         level: alarmLevelOf(e.eventMsg || '', kind === '告警'),
         kind,
         workspace: formatWorkspace(e.workSpaceName),
-        source: e.channelId ? `通道${e.channelId}` : '系统',
+        source: e.channelId == null || String(e.channelId).trim() === '' ? '系统' : `通道${e.channelId}`,
         msg: e.eventMsg || e.eventName || ''
       };
     });
@@ -356,7 +356,7 @@ export function mapBigScreen(raw: RawBigScreen, prev?: EnergyState): EnergyState
     bms: prev?.bms ?? bmsOf(undefined),
     cabPhase: { cab1: phaseOf(power.cab1), cab2: phaseOf(power.cab2), cab3: phaseOf(power.cab3) },
     essLimited: false,
-    essStep: num(channels[0]?.nStepCode, 1) || 1,
+    essStep: num(channels[0]?.nStepCode, 1),
     energy: {
       grid: { imp: 0, exp: 0 },
       ess: { imp: 0, exp: num(bs.SavePower) },

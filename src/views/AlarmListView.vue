@@ -49,7 +49,7 @@ function toRow(item: RawEventPageItem, index: number): AlarmRow {
     id: item.id,
     no: (page.value - 1) * pageSize.value + index + 1,
     workspace: item.workSpaceName ? `WorkSpace${item.workSpaceName}` : 'WorkSpace0',
-    channel: item.channelId || '—',
+    channel: item.channelId == null || String(item.channelId).trim() === '' ? '—' : String(item.channelId),
     kind: kindOf(item),
     name: item.eventName || '—',
     desc: item.eventMsg || '',

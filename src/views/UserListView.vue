@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { EmsApi } from '@/core/api';
 import type { RawUser } from '@/core/api';
+import { userGroupId } from '@/core/session';
 import ListPager from '@/components/ListPager.vue';
 
 interface UserRow {
@@ -63,11 +64,11 @@ function rowOf(u: RawUser): UserRow {
     login: u.userCode,
     phone: u.phone ?? '',
     email: u.email ?? '',
-    role: roleOf(u.usergroupId ?? 1),
+    role: roleOf(userGroupId(u) ?? 0),
     active: u.enabled === 1,
     updatedAt: (u.updateOn ?? '').slice(0, 10),
     updatedBy: u.updateBy ?? '',
-    groupId: u.usergroupId ?? 1
+    groupId: userGroupId(u) ?? 0
   };
 }
 
