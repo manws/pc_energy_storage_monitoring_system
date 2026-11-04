@@ -52,7 +52,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => isFaultStatus(c.stat
             <span>kW</span>
           </div>
           <div class="meta">{{ fmt(ch.voltage, 1) }} V · {{ fmt(ch.current, 1) }} A</div>
-          <div class="mode" :class="ch.modeCls">{{ ch.step }}</div>
+          <div v-if="ch.step" class="mode" :class="ch.modeCls">{{ ch.step }}</div>
         </div>
         <div class="gauge">
           <span>300</span>
@@ -113,6 +113,8 @@ const anyFault = computed(() => state.value.pcs.some((c) => isFaultStatus(c.stat
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .mark.channel { flex: none; }
 .mark.channel strong {
@@ -121,20 +123,25 @@ const anyFault = computed(() => state.value.pcs.some((c) => isFaultStatus(c.stat
   color: var(--accent, #3ad4ff);
 }
 .sep { flex: none; width: 1px; height: 14px; background: rgba(90, 196, 255, 0.4); }
-.power { display: flex; align-items: baseline; justify-content: space-between; }
-.st { margin-left: auto; flex: none; font-size: 13px; }
+.st { margin-left: auto; flex: none; font-size: 13px; letter-spacing: 0.08em; }
 .st.ok { color: #2ee59a; }
 .st.bad, .bad { color: #ff8a8a; }
-.power { margin-top: 8px; }
-.power .num { font-size: 28px; line-height: 1; }
+.power {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
+}
+.power .num { font-size: 30px; line-height: 1; color: #e7f6ff; }
+.power span:last-child { font-size: 12px; color: #7eb4cc; }
 .meta { margin-top: 4px; color: #7eb4cc; font-size: 12px; }
 .mode {
   align-self: flex-start;
-  margin-top: 10px;
-  padding: 3px 10px;
-  font-size: 14px;
+  margin-top: auto;
+  padding: 2px 8px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   border: 1px solid currentColor;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
@@ -144,7 +151,7 @@ const anyFault = computed(() => state.value.pcs.some((c) => isFaultStatus(c.stat
 .mode.rest { color: #d5e8f2; }
 
 .gauge {
-  width: 36px;
+  width: 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -155,9 +162,11 @@ const anyFault = computed(() => state.value.pcs.some((c) => isFaultStatus(c.stat
 
 .track {
   flex: 1;
-  width: 14px;
+  width: 10px;
   border: 1px solid rgba(90, 196, 255, 0.35);
-  background: rgba(4, 16, 28, 0.65);
+  background:
+    linear-gradient(180deg, transparent 49%, rgba(90, 196, 255, 0.28) 49%, rgba(90, 196, 255, 0.28) 51%, transparent 51%),
+    rgba(4, 16, 28, 0.65);
   display: flex;
   align-items: flex-end;
 }

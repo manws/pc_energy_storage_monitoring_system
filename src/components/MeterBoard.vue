@@ -71,7 +71,7 @@ const view = computed(() => {
       <el-switch v-model="auto" size="small" />
     </template>
     <div class="split">
-      <ul class="list">
+      <ul class="list thin-scroll">
         <li
           v-for="r in rows"
           :key="r.id"
@@ -80,7 +80,7 @@ const view = computed(() => {
           :style="{ '--c': r.alarm ? '#ff6b6b' : r.color }"
           @click="emit('update:selected', r.id)"
         >
-          <i :class="r.icon" />
+          <i :class="r.icon" class="ico" :style="{ color: r.alarm ? '#ff6b6b' : r.color }" />
           <div class="name">
             <div class="text-[13px] text-slate-100 leading-4">{{ r.name }}</div>
             <div class="text-[11px] text-slate-500 leading-4">{{ r.device }}</div>
@@ -157,60 +157,62 @@ const view = computed(() => {
   flex-direction: column;
   gap: 4px;
   margin: 0;
-  padding: 6px 8px;
+  padding: 6px 8px 4px;
   list-style: none;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 34px;
+  gap: 8px;
+  min-height: 32px;
   padding: 3px 8px;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 1px solid rgba(90, 196, 255, 0.16);
   background: rgba(8, 36, 64, 0.55);
 }
 
+.ico { flex-shrink: 0; width: 16px; text-align: center; font-size: 14px; }
 .name { flex: 1; min-width: 0; }
-.name div { white-space: nowrap; }
+.name div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .val { flex: 0 0 auto; text-align: right; }
 
 .row.is-on {
-  border-color: var(--c);
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  background: color-mix(in srgb, var(--c) 10%, rgba(8, 36, 64, 0.55));
   box-shadow: inset 3px 0 0 var(--c);
 }
 
 .detail {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 10px 8px;
+  padding: 8px 10px 10px;
   border-top: 1px solid rgba(90, 196, 255, 0.18);
 }
 
 .hero, .facts, .lines { display: flex; }
-.hero { justify-content: space-between; gap: 12px; align-items: flex-end; flex: 0 0 auto; }
-.facts { display: grid; grid-template-columns: auto auto; gap: 4px 12px; font-size: 12px; align-content: end; }
-.tbl-box { flex: 1; min-height: 0; }
+.hero { justify-content: space-between; gap: 8px 12px; align-items: flex-end; flex: 0 0 auto; flex-wrap: wrap; }
+.facts { display: grid; grid-template-columns: auto auto; gap: 4px 12px; font-size: 12px; align-content: end; margin-left: auto; }
+.tbl-box { flex: 0 0 auto; }
 .tbl {
   width: 100%;
-  height: 100%;
   font-size: 13px;
   border-collapse: collapse;
 }
-.tbl th, .tbl td { padding: 0 4px; text-align: right; }
+.tbl th, .tbl td { padding: 4px; text-align: right; }
+.tbl th { border-bottom: 1px solid rgba(90, 196, 255, 0.22); font-weight: 500; }
+.tbl tbody tr + tr td { border-top: 1px solid rgba(90, 196, 255, 0.1); }
 .tbl th:first-child, .tbl td:first-child { text-align: left; color: #7eb4cc; }
 .lines { gap: 8px; flex: 0 0 auto; }
 .cell {
   flex: 1;
   min-width: 0;
   text-align: center;
-  padding: 6px 0;
-  background: rgba(8, 36, 64, 0.55);
+  padding: 8px 0;
 }
 </style>

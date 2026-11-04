@@ -18,7 +18,7 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
         <span v-if="index" class="panel-index num">{{ index }}</span>
         <h3 class="panel-title">{{ title }}</h3>
         <span v-if="sub" class="panel-sub">{{ sub }}</span>
-        <div class="ml-auto flex items-center gap-1.5">
+        <div class="head-extra">
           <slot name="extra" />
         </div>
       </header>
@@ -115,12 +115,22 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
 
 .panel-title {
   margin: 0;
+  flex-shrink: 0;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.12em;
   color: #e7f6ff;
   text-shadow: 0 0 12px rgba(58, 212, 255, 0.35);
   white-space: nowrap;
+}
+
+.head-extra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .panel-sub {
@@ -137,5 +147,9 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
 .panel-body {
   position: relative;
   flex: 1 1 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell { animation: none; }
 }
 </style>

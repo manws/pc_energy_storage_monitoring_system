@@ -59,8 +59,8 @@ const view = computed(() => {
         <span><i class="inline-block w-4 h-[2px] align-middle bg-amber-400 mr-1" />反向馈电</span>
       </span>
     </template>
-    <div class="relative w-full h-full px-4 py-2">
-      <div class="relative w-full h-full">
+    <div class="fit">
+      <div class="canvas">
         <svg class="absolute inset-0 w-full h-full" :viewBox="`0 0 ${VW} ${VH}`" preserveAspectRatio="none">
           <defs>
             <linearGradient id="bus-g" x1="0" y1="0" x2="0" y2="1">
@@ -115,6 +115,17 @@ const view = computed(() => {
 </template>
 
 <style scoped>
+.fit {
+  height: 100%;
+  padding: 6px 12px 8px;
+}
+
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 svg path,
 svg line {
   vector-effect: non-scaling-stroke;
@@ -140,7 +151,7 @@ svg line {
   place-items: center;
   font-size: 26px;
   color: #fff;
-  border-radius: 10px;
+  border-radius: 2px;
   background: linear-gradient(180deg, #1aa8e6, #0a4e8a);
   box-shadow: 0 0 16px rgba(58, 180, 255, 0.55);
 }
@@ -155,14 +166,15 @@ svg line {
   padding: 8px 14px;
   text-align: center;
   white-space: nowrap;
-  border-radius: 10px;
+  border-radius: 2px;
   background: rgba(6, 28, 52, 0.85);
-  box-shadow: inset 0 0 0 1px rgba(90, 196, 255, 0.45), 0 0 12px rgba(20, 120, 210, 0.2);
+  border: 1px solid rgba(90, 196, 255, 0.45);
 }
 
 .gm.is-alarm {
   background: rgba(60, 12, 16, 0.85);
-  box-shadow: inset 0 0 0 1.5px #dc2626, 0 12px 26px -12px rgba(220, 38, 38, 0.5);
+  border-color: #dc2626;
+  box-shadow: 0 12px 26px -12px rgba(220, 38, 38, 0.5);
 }
 
 .bm {
@@ -170,11 +182,12 @@ svg line {
   align-items: center;
   gap: 8px;
   width: 214px;
-  padding: 4px 12px;
+  height: 32px;
+  padding: 0 12px;
   white-space: nowrap;
-  border-radius: 8px;
-  background: rgba(6, 28, 52, 0.82);
-  box-shadow: inset 0 0 0 1px var(--bc), 0 0 10px rgba(20, 120, 210, 0.15);
+  border-radius: 2px;
+  background: rgba(6, 28, 52, 0.85);
+  border: 1px solid var(--bc, rgba(90, 196, 255, 0.35));
 }
 
 .dev {
@@ -182,10 +195,15 @@ svg line {
   align-items: center;
   gap: 8px;
   width: 172px;
-  padding: 5px 12px;
+  height: 40px;
+  padding: 0 12px;
   white-space: nowrap;
-  border-radius: 12px;
+  border-radius: 2px;
   background: rgba(8, 36, 64, 0.8);
-  box-shadow: inset 0 0 0 1px var(--bc);
+  border: 1px solid var(--bc, rgba(90, 196, 255, 0.28));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow { animation: none; }
 }
 </style>

@@ -64,22 +64,24 @@ const kpis = computed<Kpi[]>(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-6 gap-3 h-[92px]">
+  <div class="grid grid-cols-6 gap-3 h-[100px]">
     <div v-for="(k, n) in kpis" :key="k.id" class="kpi" :class="{ 'is-alarm': k.alarm }" :style="{ '--c': k.color, animationDelay: `${n * 60}ms` }">
+      <i class="tick tl" />
+      <i class="tick br" />
       <div class="flex items-center gap-2 min-w-0">
         <div class="ico"><i :class="k.icon" /></div>
         <div class="label truncate">{{ k.label }}</div>
       </div>
-      <div class="flex items-baseline gap-1 leading-none mt-1 min-w-0">
+      <div class="value">
         <template v-if="k.pair">
-          <AnimatedNumber :value="k.pair[0]" :decimals="3" class="text-[20px]" />
-          <span class="text-[14px] text-slate-500">/</span>
-          <AnimatedNumber :value="k.pair[1]" :decimals="3" class="text-[20px]" />
+          <AnimatedNumber :value="k.pair[0]" :decimals="3" class="num-main is-pair" />
+          <span class="slash">/</span>
+          <AnimatedNumber :value="k.pair[1]" :decimals="3" class="num-main is-pair" />
         </template>
-        <AnimatedNumber v-else :value="k.value" :decimals="k.decimals" class="text-[24px]" :style="{ color: k.alarm ? '#ff6b6b' : '#e7f6ff' }" />
-        <span class="text-[12px] text-slate-400">{{ k.unit }}</span>
+        <AnimatedNumber v-else :value="k.value" :decimals="k.decimals" class="num-main" :style="{ color: k.alarm ? '#ff6b6b' : '#e7f6ff' }" />
+        <span class="unit">{{ k.unit }}</span>
       </div>
-      <div class="text-[12px] mt-1 leading-4" :class="k.subCls || 'text-slate-400'">{{ k.sub }}</div>
+      <div class="sub" :class="k.subCls || 'text-slate-400'">{{ k.sub }}</div>
     </div>
   </div>
 </template>
@@ -87,14 +89,14 @@ const kpis = computed<Kpi[]>(() => {
 <style scoped>
 .kpi {
   position: relative;
-  padding: 6px 12px;
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
   justify-content: center;
-  gap: 0;
+  min-width: 0;
+  padding: 8px 14px 8px 16px;
   border-radius: 2px;
-  background: linear-gradient(180deg, rgba(12, 48, 86, 0.55), rgba(4, 18, 38, 0.82));
-  border: 1px solid rgba(90, 196, 255, 0.4);
+  background: linear-gradient(180deg, rgba(12, 48, 86, 0.55), rgba(4, 18, 38, 0.88));
+  border: 1px solid rgba(90, 196, 255, 0.45);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   animation: rise-in 0.7s var(--ease) both;
@@ -131,15 +133,55 @@ const kpis = computed<Kpi[]>(() => {
   pointer-events: none;
 }
 
+.tick {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #7ee7ff;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.br { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+
+.value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  height: 30px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.num-main { font-size: 24px; line-height: 1; color: #e7f6ff; }
+.num-main.is-pair { font-size: 18px; }
+.slash { font-size: 14px; color: #5d8eaa; }
+.unit { flex-shrink: 0; font-size: 12px; color: #7eb4cc; }
+
+.sub {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ico {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: 13px;
   color: var(--c);
-  border-radius: 8px;
   background: color-mix(in srgb, var(--c) 16%, #07182c);
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi { animation: none; }
 }
 </style>

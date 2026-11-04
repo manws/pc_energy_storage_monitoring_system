@@ -101,11 +101,11 @@ main,
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  grid-template-rows: minmax(0, 1.55fr) minmax(0, 0.72fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1.48fr) minmax(0, 0.78fr);
   grid-template-areas:
     "meters flow flow pcs"
-    "alarm alarm soc soc";
+    "alarm alarm alarm soc";
   gap: 12px;
 }
 

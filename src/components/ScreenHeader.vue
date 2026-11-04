@@ -116,6 +116,7 @@ const router = useRouter();
   align-items: center;
   justify-content: space-between;
   padding: 0 18px 6px;
+  border-bottom: 1px solid rgba(90, 196, 255, 0.16);
 }
 
 .logo {
@@ -127,7 +128,7 @@ const router = useRouter();
   border: 0;
   font-size: 18px;
   color: #e7f6ff;
-  border-radius: 4px;
+  border-radius: 2px;
   background: linear-gradient(180deg, #1aa8e6, #0a4e8a);
   box-shadow: 0 0 14px rgba(58, 180, 255, 0.55);
   cursor: pointer;

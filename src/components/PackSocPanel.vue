@@ -21,16 +21,20 @@ const range = computed(() => {
 
 <template>
   <BasePanel title="储能电池 SOC" sub="Battery Packs" index="05">
-    <template #extra>
-      <span class="text-[12px] text-slate-400">最高 {{ fmt(range.max, 1) }}% · 最低 {{ fmt(range.min, 1) }}%</span>
-    </template>
     <div class="chart">
-      <div v-for="p in packs" :key="p.name" class="col">
-        <span class="num val">{{ fmt(p.soc, 0) }}</span>
-        <div class="track">
-          <i :style="{ height: `${p.soc}%` }" />
+      <div v-for="p in packs" :key="p.name" class="pack">
+        <div class="top">
+          <span class="name">{{ p.name }}</span>
+          <span class="num val">{{ fmt(p.soc, 1) }}<i>%</i></span>
         </div>
-        <span class="name">{{ p.name }}</span>
+        <div class="track">
+          <i :style="{ width: `${Math.min(100, Math.max(0, p.soc))}%` }" />
+        </div>
+        <div class="scale"><span>0</span><span>50</span><span>100</span></div>
+      </div>
+      <div class="range">
+        <span>最高 <b class="num">{{ fmt(range.max, 1) }}%</b></span>
+        <span>最低 <b class="num">{{ fmt(range.min, 1) }}%</b></span>
       </div>
     </div>
   </BasePanel>
@@ -41,35 +45,68 @@ const range = computed(() => {
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: stretch;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 12px 8px;
 }
 
-.col {
+.pack {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(8, 36, 64, 0.55);
+  border: 1px solid rgba(90, 196, 255, 0.22);
 }
 
-.val { font-size: 11px; color: #c5e6f5; }
-.name { font-size: 11px; color: #7eb4cc; }
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.name { font-size: 13px; letter-spacing: 0.08em; color: #c5e6f5; }
+.val { font-size: 26px; line-height: 1; color: #e7f6ff; }
+.val i { margin-left: 2px; font-style: normal; font-size: 12px; color: #7eb4cc; font-family: 'Instrument Sans', 'PingFang SC', sans-serif; }
 
 .track {
-  flex: 1;
-  width: 100%;
-  max-width: 22px;
-  border: 1px solid rgba(90, 196, 255, 0.28);
-  background: rgba(4, 16, 28, 0.55);
-  display: flex;
-  align-items: flex-end;
+  position: relative;
+  height: 12px;
+  border: 1px solid rgba(90, 196, 255, 0.35);
+  background:
+    linear-gradient(90deg, transparent 49.6%, rgba(90, 196, 255, 0.45) 49.6%, rgba(90, 196, 255, 0.45) 50.4%, transparent 50.4%),
+    rgba(4, 16, 28, 0.65);
+  overflow: hidden;
 }
 
 .track i {
-  width: 100%;
-  background: linear-gradient(180deg, #7ee7ff, #1aa8e6);
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #1aa8e6, #7ee7ff);
 }
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 1;
+  color: #5d8eaa;
+  font-variant-numeric: tabular-nums;
+}
+
+.range {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px;
+  font-size: 12px;
+  color: #7eb4cc;
+}
+
+.range b { font-weight: 500; color: #e7f6ff; }
 </style>
