@@ -127,10 +127,10 @@ const router = useRouter();
   padding: 0;
   border: 0;
   font-size: 18px;
-  color: #e7f6ff;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #1aa8e6, #0a4e8a);
-  box-shadow: 0 0 14px rgba(58, 180, 255, 0.55);
+  color: #f2fbff;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #7ce8ff 0%, #196bad 100%);
+  box-shadow: inset 0 0 0 1px rgba(124, 232, 255, 0.45), 0 0 14px rgba(58, 180, 255, 0.45);
   cursor: pointer;
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }

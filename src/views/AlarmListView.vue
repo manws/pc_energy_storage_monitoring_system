@@ -7,7 +7,7 @@ import type { RawEventPageItem } from '@/core/api';
 import { parseTime } from '@/core/apiMapper';
 import ListPager from '@/components/ListPager.vue';
 
-type Kind = '事件' | '报警';
+type Kind = '事件' | '告警';
 type Filter = 'all' | Kind;
 
 interface AlarmRow {
@@ -23,16 +23,18 @@ interface AlarmRow {
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: '全部' },
-  { id: '事件', label: '事件' },
-  { id: '报警', label: '报警' }
+  { id: '告警', label: '告警' },
+  { id: '事件', label: '事件' }
 ];
 
-// eventType: 0=事件, 1=报警
-const TYPE_CODE: Record<Kind, number> = { 事件: 0, 报警: 1 };
+// eventType 必传：0=事件，1=报警；全部传 -1（0 会被当成事件，null/空串会 400）
+const TYPE_CODE: Record<Kind, number> = { 事件: 0, 告警: 1 };
+const ALL_EVENT_TYPE = -1;
 
 const filter = ref<Filter>('all');
-const keyword = ref('');
 const date = ref<string | null>(null);
+const appliedFilter = ref<Filter>('all');
+const appliedDate = ref<string | null>(null);
 const page = ref(1);
 const pageSize = ref(50);
 const total = ref(0);
@@ -41,7 +43,7 @@ const loading = ref(false);
 const listError = ref('');
 
 function kindOf(item: RawEventPageItem): Kind {
-  return item.eventTypeCode === 1 || item.eventTypeName === '报警' ? '报警' : '事件';
+  return item.eventTypeCode === 1 || item.eventTypeName === '报警' || item.eventTypeName === '告警' ? '告警' : '事件';
 }
 
 function toRow(item: RawEventPageItem, index: number): AlarmRow {
@@ -57,17 +59,20 @@ function toRow(item: RawEventPageItem, index: number): AlarmRow {
   };
 }
 
+function queryBody() {
+  return {
+    eventType: appliedFilter.value === 'all' ? ALL_EVENT_TYPE : TYPE_CODE[appliedFilter.value],
+    eventDate: appliedDate.value ?? '',
+    pageIndex: page.value,
+    pageSize: pageSize.value
+  };
+}
+
 async function load() {
   loading.value = true;
   listError.value = '';
   try {
-    const body: { eventType?: number; eventDate?: string; pageIndex: number; pageSize: number } = {
-      pageIndex: page.value,
-      pageSize: pageSize.value
-    };
-    if (filter.value !== 'all') body.eventType = TYPE_CODE[filter.value];
-    if (date.value) body.eventDate = date.value;
-    const res = await EmsApi.eventPage(body);
+    const res = await EmsApi.eventPage(queryBody());
     rows.value = (res.eventList ?? []).map(toRow);
     total.value = res.page?.totalCount ?? rows.value.length;
   } catch (e) {
@@ -81,19 +86,36 @@ async function load() {
 
 onMounted(load);
 
-// 关键词过滤在当前页内进行（后端不支持关键词检索）。
-const shown = computed(() => {
-  const word = keyword.value.trim().toLowerCase();
-  if (!word) return rows.value;
-  return rows.value.filter((item) =>
-    [item.workspace, item.channel, item.name, item.desc].some((field) => field.toLowerCase().includes(word))
-  );
-});
 const counts = computed(() => ({ all: total.value }));
 const pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 
-// 筛选条件变化：回第一页并重新拉取；翻页/改每页条数：直接重新拉取。
-watch([filter, date], () => { page.value = 1; void load(); });
+function reloadFromFirstPage() {
+  if (page.value === 1) void load();
+  else page.value = 1;
+}
+
+function selectFilter(next: Filter) {
+  if (filter.value === next) return;
+  filter.value = next;
+  appliedFilter.value = next;
+  appliedDate.value = date.value;
+  reloadFromFirstPage();
+}
+
+function search() {
+  appliedFilter.value = filter.value;
+  appliedDate.value = date.value;
+  reloadFromFirstPage();
+}
+
+function reset() {
+  filter.value = 'all';
+  date.value = null;
+  appliedFilter.value = 'all';
+  appliedDate.value = null;
+  reloadFromFirstPage();
+}
+
 watch([page, pageSize], () => { void load(); });
 </script>
 
@@ -106,7 +128,7 @@ watch([page, pageSize], () => { void load(); });
           :key="item.id"
           type="button"
           :class="{ on: filter === item.id }"
-          @click="filter = item.id"
+          @click="selectFilter(item.id)"
         >{{ item.label }}<b v-if="item.id === 'all'" class="num">{{ counts.all }}</b></button>
       </nav>
       <div class="tools">
@@ -126,15 +148,14 @@ watch([page, pageSize], () => { void load(); });
             />
           </el-config-provider>
         </label>
-        <label class="find">
-          关键词
-          <el-input v-model="keyword" class="desk-field word" placeholder="名称或描述" clearable />
-        </label>
+        <button type="button" class="ghost" @click="reset">重置</button>
+        <button type="button" class="search" @click="search">搜索</button>
       </div>
     </header>
 
+    <div class="data">
     <div class="board">
-      <table v-if="shown.length">
+      <table v-if="rows.length">
         <thead>
           <tr>
             <th>序号</th>
@@ -147,7 +168,7 @@ watch([page, pageSize], () => { void load(); });
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in shown" :key="item.id" :class="item.kind === '报警' ? 'alarm' : 'event'">
+          <tr v-for="item in rows" :key="item.id" :class="item.kind === '告警' ? 'alarm' : 'event'">
             <td class="num">{{ item.no }}</td>
             <td>{{ item.workspace }}</td>
             <td class="num">{{ item.channel }}</td>
@@ -160,12 +181,13 @@ watch([page, pageSize], () => { void load(); });
       </table>
       <p v-else-if="loading" class="empty">加载中…<span>正在获取事件记录</span></p>
       <p v-else-if="listError" class="empty">事件记录加载失败<span>{{ listError }}</span></p>
-      <p v-else class="empty">没有符合条件的记录<span>换个类型、日期或关键字</span></p>
+      <p v-else class="empty">没有符合条件的记录<span>换个类型或日期后再搜索</span></p>
     </div>
     <footer class="foot">
       <p>共 <b class="num">{{ total }}</b> 条</p>
       <ListPager v-model:page="page" v-model:size="pageSize" :pages="pages" />
     </footer>
+    </div>
   </div>
 </template>
 
@@ -176,7 +198,6 @@ watch([page, pageSize], () => { void load(); });
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 18px 16px;
 }
 
 .bar {
@@ -184,6 +205,11 @@ watch([page, pageSize], () => { void load(); });
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 60px;
+  padding: 11px 12px;
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-surface);
 }
 
 .bar p {
@@ -194,33 +220,52 @@ watch([page, pageSize], () => { void load(); });
 
 .bar b { color: #e7f6ff; font-weight: 500; }
 
-.filters { display: flex; gap: 8px; }
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--desk-line-strong);
+  border-radius: 8px;
+  background: #06101b;
+}
 
 .filters button {
-  height: 32px;
+  height: 28px;
   padding: 0 14px;
-  border: 1px solid rgba(90, 196, 255, 0.35);
-  background: rgba(6, 28, 52, 0.55);
-  color: #c5e6f5;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--desk-muted);
   font: inherit;
-  letter-spacing: 0.06em;
   cursor: pointer;
 }
 
 .filters button.on,
 .filters button.on b {
-  color: #04101c;
-  background: #3ad4ff;
-  border-color: #7ee7ff;
+  color: #06101b;
+  background: var(--desk-accent);
+  font-weight: 500;
 }
 
 .filters button b {
   margin-left: 6px;
-  color: #7ee7ff;
-  font-weight: 500;
+  color: var(--desk-accent);
+  font-weight: 600;
 }
 
-.filters button.on b { background: transparent; }
+.filters button.on b {
+  display: inline-flex;
+  min-width: 20px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #06101b;
+  color: var(--desk-accent);
+}
 
 
 .tools {
@@ -234,8 +279,8 @@ watch([page, pageSize], () => { void load(); });
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #9fd0e6;
-  font-size: 13px;
+  color: var(--desk-muted);
+  font-size: 12px;
 }
 
 .find :deep(.word) { width: 180px; }
@@ -245,33 +290,73 @@ watch([page, pageSize], () => { void load(); });
   width: 168px;
 }
 
+.ghost,
+.search {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ghost {
+  color: var(--desk-text-2);
+  background: var(--desk-surface);
+  border: 1px solid var(--desk-line-strong);
+}
+
+.ghost:hover { border-color: var(--desk-accent); color: var(--desk-text); }
+
+.search {
+  border: 0;
+  background: var(--desk-accent);
+  color: #06101b;
+  font-weight: 500;
+}
+
+.search:hover { filter: brightness(1.08); }
+
+.data {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-surface);
+  overflow: hidden;
+}
+
 .foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 48px;
+  padding: 0 16px;
+  background: var(--desk-deep);
 }
 
-.foot p { margin: 0; color: #7eb4cc; font-size: 13px; }
-.foot b { color: #e7f6ff; font-weight: 500; }
+.foot p { margin: 0; color: var(--desk-muted); font-size: 13px; }
+.foot b { color: var(--desk-text); font-weight: 500; }
 
 .board {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid rgba(90, 196, 255, 0.28);
-  background: #06182e;
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
 th, td {
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(90, 196, 255, 0.14);
+  border-bottom: 1px solid var(--desk-line);
   text-align: left;
   vertical-align: middle;
 }
@@ -279,29 +364,35 @@ th, td {
 th {
   position: sticky;
   top: 0;
-  color: #7eb4cc;
+  z-index: 2;
+  color: var(--desk-muted);
   font-weight: 500;
-  letter-spacing: 0.08em;
-  background: #06182e;
+  background: var(--desk-deep);
+  box-shadow: 0 1px 0 var(--desk-line);
 }
 
-td { color: #d7eef8; }
+td { color: var(--desk-text-2); }
 
-.time { color: #9fd0e6; white-space: nowrap; }
-.msg { color: #e7f6ff; line-height: 1.45; }
+.time { color: var(--desk-text-2); white-space: nowrap; }
+.msg { color: var(--desk-muted); line-height: 1.45; }
 
 .lv {
-  display: inline-block;
-  min-width: 32px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--desk-line-strong);
+  border-radius: 4px;
+  background: var(--desk-line);
+  font-size: 12px;
+  font-weight: 500;
 }
 
-tr.event .lv { color: #7ee7ff; }
-tr.alarm .lv { color: #ff8a8a; }
+tr.event .lv { color: var(--desk-accent); }
+tr.alarm .lv { color: #ff8a8a; border-color: rgba(255, 138, 138, 0.35); }
 tr.alarm td:first-child { box-shadow: inset 3px 0 0 #ff8a8a; }
 
-tbody tr:hover td { background: rgba(58, 212, 255, 0.06); }
+tbody tr:hover td { background: rgba(109, 209, 250, 0.04); }
 
 .empty {
   margin: 0;
@@ -309,10 +400,10 @@ tbody tr:hover td { background: rgba(58, 212, 255, 0.06); }
   display: grid;
   justify-items: center;
   gap: 6px;
-  color: #e7f6ff;
+  color: var(--desk-text);
 }
 
-.empty span { color: #7eb4cc; font-size: 13px; }
+.empty span { color: var(--desk-dim); font-size: 13px; }
 </style>
 
 <style>
@@ -334,7 +425,7 @@ tbody tr:hover td { background: rgba(58, 212, 255, 0.06); }
   --el-color-primary: #3ad4ff;
   background: #07182c;
   border: 1px solid rgba(90, 196, 255, 0.45);
-  border-radius: 0;
+  border-radius: 8px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
   font-family: 'Instrument Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }

@@ -13,6 +13,16 @@
   --c-dim: #7eb4cc;
   --c-bg: #04101c;
   --c-card: rgba(6, 28, 52, 0.72);
+  --desk-bg: #0a182c;
+  --desk-surface: #0c1c32;
+  --desk-deep: #091421;
+  --desk-line: #193049;
+  --desk-line-strong: #284765;
+  --desk-accent: #6dd1fa;
+  --desk-text: #eaf5fe;
+  --desk-text-2: #dbedf7;
+  --desk-muted: #8ab3c9;
+  --desk-dim: #6c8da1;
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --shadow-soft: inset 0 0 24px rgba(30, 140, 220, 0.12), 0 0 16px rgba(16, 110, 200, 0.18);
   --el-color-primary: #1aa8e6;
@@ -131,17 +141,17 @@ body,
   height: 32px;
   min-height: 32px;
   padding: 0 10px;
-  border-radius: 0;
-  background-color: #061c34;
-  box-shadow: 0 0 0 1px rgba(90, 196, 255, 0.35) inset;
+  border-radius: 6px;
+  background-color: #0a182c;
+  box-shadow: 0 0 0 1px #284765 inset;
 }
 
 .desk-field .el-input__wrapper.is-focus,
 .desk-field:not(.is-disabled) .el-input__wrapper:hover,
 .el-select.desk-field .el-select__wrapper.is-focused,
 .el-select.desk-field .el-select__wrapper.is-hovering {
-  background-color: #061c34;
-  box-shadow: 0 0 0 1px #7ee7ff inset;
+  background-color: #0a182c;
+  box-shadow: 0 0 0 1px #6dd1fa inset;
 }
 
 .desk-field .el-input__inner,
@@ -198,7 +208,7 @@ body,
   --el-color-primary: #3ad4ff;
   background: #07182c;
   border: 1px solid rgba(90, 196, 255, 0.45);
-  border-radius: 0;
+  border-radius: 8px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
@@ -227,13 +237,13 @@ body,
 }
 
 .el-dialog {
-  --el-dialog-bg-color: #07182c;
+  --el-dialog-bg-color: #0c1c32;
   --el-dialog-padding-primary: 18px;
-  border-radius: 0;
+  border-radius: 12px;
   padding: 18px 18px 16px;
-  background: #07182c;
-  border: 1px solid rgba(90, 196, 255, 0.45);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  background: #0c1c32;
+  border: 1px solid #284765;
+  box-shadow: 0 24px 64px rgba(6, 16, 27, 0.72);
 }
 
 .el-dialog__title {
@@ -266,7 +276,7 @@ body,
   --el-button-active-bg-color: rgba(58, 212, 255, 0.2);
   --el-button-active-border-color: #7ee7ff;
   --el-button-active-text-color: #e7f6ff;
-  border-radius: 0;
+  border-radius: 6px;
   font-weight: 500;
   letter-spacing: 0.06em;
 }

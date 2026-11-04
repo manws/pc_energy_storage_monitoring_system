@@ -46,14 +46,18 @@ const pageSize = ref(50);
 type ActiveFilter = 'all' | 'on' | 'off';
 
 const users = ref<UserRow[]>([]);
+const total = ref(0);
 const loading = ref(false);
 const saving = ref(false);
 const listError = ref('');
 
 const open = ref(false);
 const error = ref('');
-const keyword = ref('');
+const userCode = ref('');
+const userName = ref('');
 const activeFilter = ref<ActiveFilter>('all');
+const appliedUserCode = ref('');
+const appliedUserName = ref('');
 const page = ref(1);
 const form = reactive<UserForm>(blank());
 
@@ -72,15 +76,29 @@ function rowOf(u: RawUser): UserRow {
   };
 }
 
+function applyEnabled(list: UserRow[]): UserRow[] {
+  if (activeFilter.value === 'on') return list.filter((item) => item.active);
+  if (activeFilter.value === 'off') return list.filter((item) => !item.active);
+  return list;
+}
+
 async function load() {
   loading.value = true;
   listError.value = '';
   try {
-    const res = await EmsApi.userPage({ pageIndex: 1, pageSize: 500 });
-    users.value = (res.userList ?? []).map(rowOf);
+    const res = await EmsApi.userPage({
+      userCode: appliedUserCode.value.trim(),
+      userName: appliedUserName.value.trim(),
+      pageIndex: page.value,
+      pageSize: pageSize.value
+    });
+    const list = applyEnabled((res.userList ?? []).map(rowOf));
+    users.value = list;
+    total.value = activeFilter.value === 'all' ? (res.page?.totalCount ?? list.length) : list.length;
   } catch (e) {
     listError.value = e instanceof Error ? e.message : String(e);
     users.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -88,19 +106,35 @@ async function load() {
 
 onMounted(load);
 
-const matched = computed(() => {
-  const word = keyword.value.trim().toLowerCase();
-  return users.value.filter((item) => {
-    if (activeFilter.value === 'on' && !item.active) return false;
-    if (activeFilter.value === 'off' && item.active) return false;
-    if (!word) return true;
-    return [item.name, item.login, item.phone, item.email].some((field) => field.toLowerCase().includes(word));
-  });
-});
-const pages = computed(() => Math.max(1, Math.ceil(matched.value.length / pageSize.value)));
-const shown = computed(() => matched.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value));
+const pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
 
-watch([keyword, activeFilter], () => { page.value = 1; });
+function reloadFromFirstPage() {
+  if (page.value === 1) void load();
+  else page.value = 1;
+}
+
+function selectFilter(next: ActiveFilter) {
+  if (activeFilter.value === next) return;
+  activeFilter.value = next;
+  reloadFromFirstPage();
+}
+
+function search() {
+  appliedUserCode.value = userCode.value;
+  appliedUserName.value = userName.value;
+  reloadFromFirstPage();
+}
+
+function reset() {
+  userCode.value = '';
+  userName.value = '';
+  activeFilter.value = 'all';
+  appliedUserCode.value = '';
+  appliedUserName.value = '';
+  reloadFromFirstPage();
+}
+
+watch([page, pageSize], () => { void load(); });
 watch(pages, (n) => { if (page.value > n) page.value = n; });
 
 function blank(): UserForm {
@@ -200,19 +234,28 @@ async function save() {
   <div class="page">
     <header class="bar">
       <nav class="filters" aria-label="激活状态">
-        <button type="button" :class="{ on: activeFilter === 'all' }" @click="activeFilter = 'all'">全部</button>
-        <button type="button" :class="{ on: activeFilter === 'on' }" @click="activeFilter = 'on'">已激活</button>
-        <button type="button" :class="{ on: activeFilter === 'off' }" @click="activeFilter = 'off'">未激活</button>
+        <button type="button" :class="{ on: activeFilter === 'all' }" @click="selectFilter('all')">全部</button>
+        <button type="button" :class="{ on: activeFilter === 'on' }" @click="selectFilter('on')">已激活</button>
+        <button type="button" :class="{ on: activeFilter === 'off' }" @click="selectFilter('off')">未激活</button>
       </nav>
-      <label class="find">
-        关键词
-        <el-input v-model="keyword" class="desk-field word" placeholder="登录名称、姓名、手机号、邮箱" clearable />
-      </label>
-      <button type="button" class="add" @click="create">新增</button>
+      <div class="tools">
+        <label class="find">
+          登录名称
+          <el-input v-model="userCode" class="desk-field word" placeholder="输入登录名称" clearable @keyup.enter="search" />
+        </label>
+        <label class="find">
+          姓名
+          <el-input v-model="userName" class="desk-field word" placeholder="输入姓名" clearable @keyup.enter="search" />
+        </label>
+        <button type="button" class="ghost" @click="reset">重置</button>
+        <button type="button" class="search" @click="search">搜索</button>
+        <button type="button" class="add" @click="create">新增</button>
+      </div>
     </header>
 
+    <div class="data">
     <div class="board">
-      <table v-if="shown.length">
+      <table v-if="users.length">
         <thead>
           <tr>
             <th class="idx">序号</th>
@@ -228,7 +271,7 @@ async function save() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, index) in shown" :key="row.id" :class="{ off: !row.active }">
+          <tr v-for="(row, index) in users" :key="row.id" :class="{ off: !row.active }">
             <td class="num idx">{{ (page - 1) * pageSize + index + 1 }}</td>
             <td class="num">{{ row.login }}</td>
             <td class="who">{{ row.name }}</td>
@@ -244,12 +287,13 @@ async function save() {
       </table>
       <p v-else-if="loading" class="empty">加载中…<span>正在获取用户列表</span></p>
       <p v-else-if="listError" class="empty">用户列表加载失败<span>{{ listError }}</span></p>
-      <p v-else class="empty">没有符合条件的用户<span>换个状态，或改一下关键字</span></p>
+      <p v-else class="empty">没有符合条件的用户<span>换个状态，或改一下登录名称、姓名后再搜索</span></p>
     </div>
     <footer class="foot">
-      <p>共 <b class="num">{{ matched.length }}</b> 人</p>
+      <p>共 <b class="num">{{ total }}</b> 人</p>
       <ListPager v-model:page="page" v-model:size="pageSize" :pages="pages" />
     </footer>
+    </div>
 
     <el-dialog
       v-model="open"
@@ -289,56 +333,121 @@ async function save() {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 18px 16px;
 }
 
 .bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  min-height: 60px;
+  padding: 11px 12px;
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-surface);
 }
 
-.filters { display: flex; gap: 8px; }
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--desk-line-strong);
+  border-radius: 8px;
+  background: #06101b;
+}
 
 .filters button {
-  height: 32px;
+  height: 28px;
   padding: 0 14px;
-  border: 1px solid rgba(90, 196, 255, 0.35);
-  background: rgba(6, 28, 52, 0.55);
-  color: #c5e6f5;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--desk-muted);
   font: inherit;
-  letter-spacing: 0.06em;
   cursor: pointer;
 }
 
 .filters button.on {
-  color: #04101c;
-  background: #3ad4ff;
-  border-color: #7ee7ff;
+  color: #06101b;
+  background: var(--desk-accent);
+  font-weight: 500;
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .find {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
-  color: #9fd0e6;
-  font-size: 13px;
+  color: var(--desk-muted);
+  font-size: 12px;
 }
 
-.find :deep(.word) { width: 260px; }
+.find :deep(.word) { width: 148px; }
 
+.ghost,
+.search,
+.add {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ghost {
+  color: var(--desk-text-2);
+  background: var(--desk-surface);
+  border: 1px solid var(--desk-line-strong);
+}
+
+.ghost:hover { border-color: var(--desk-accent); color: var(--desk-text); }
+
+.search,
+.add {
+  border: 0;
+  background: var(--desk-accent);
+  color: #06101b;
+  font-weight: 500;
+}
+
+.search:hover,
+.add:hover { filter: brightness(1.08); }
+
+
+.data {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-surface);
+  overflow: hidden;
+}
 
 .foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 48px;
+  padding: 0 16px;
+  background: var(--desk-deep);
 }
 
-.foot p { margin: 0; color: #7eb4cc; font-size: 13px; }
-.foot b { color: #e7f6ff; font-weight: 500; }
+.foot p { margin: 0; color: var(--desk-muted); font-size: 13px; }
+.foot b { color: var(--desk-text); font-weight: 500; }
 
 .empty {
   margin: 0;
@@ -346,47 +455,39 @@ async function save() {
   display: grid;
   justify-items: center;
   gap: 6px;
-  color: #e7f6ff;
+  color: var(--desk-text);
 }
 
-.empty span { color: #7eb4cc; font-size: 13px; }
+.empty span { color: var(--desk-dim); font-size: 13px; }
 
-tr.off .link { color: #9adfff; }
+tr.off .link { color: var(--desk-accent); }
 
-.add, .link {
-  border: 1px solid rgba(90, 196, 255, 0.45);
-  background: transparent;
-  color: #c5e6f5;
+.link {
+  border: 0;
+  background: none;
+  color: var(--desk-accent);
   font: inherit;
   cursor: pointer;
 }
 
-.add {
-  height: 32px;
-  padding: 0 16px;
-  letter-spacing: 0.08em;
-}
-
-.add:hover, .link:hover { color: #e7f6ff; border-color: #7ee7ff; }
-
+.link:hover { color: var(--desk-text); }
 
 .board {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid rgba(90, 196, 255, 0.28);
-  background: #06182e;
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
 th, td {
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(90, 196, 255, 0.14);
+  border-bottom: 1px solid var(--desk-line);
   text-align: left;
   white-space: nowrap;
 }
@@ -394,47 +495,45 @@ th, td {
 th {
   position: sticky;
   top: 0;
-  color: #7eb4cc;
+  z-index: 2;
+  color: var(--desk-muted);
   font-weight: 500;
-  letter-spacing: 0.12em;
-  background: #082038;
-  box-shadow: inset 0 -1px 0 rgba(90, 196, 255, 0.28);
+  background: var(--desk-deep);
+  box-shadow: 0 1px 0 var(--desk-line);
 }
 
-td { color: #d7eef8; }
-.idx { width: 64px; color: #5d8eaa; }
-.who { font-weight: 600; color: #e7f6ff; }
-.time { color: #9fd0e6; }
+td { color: var(--desk-text-2); }
+.idx { width: 64px; color: var(--desk-dim); }
+.who { font-weight: 600; color: var(--desk-text); }
+.time { color: #a9cfe3; }
 .role {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  color: #9fd0e6;
-  letter-spacing: 0.08em;
-  background: rgba(90, 196, 255, 0.08);
-  border: 1px solid rgba(90, 196, 255, 0.28);
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+  color: #a9cfe3;
+  background: var(--desk-line);
+  border: 1px solid var(--desk-line-strong);
 }
 .role.admin {
-  color: #04101c;
-  background: #3ad4ff;
-  border-color: #7ee7ff;
+  color: #06101b;
+  background: var(--desk-accent);
+  border-color: var(--desk-accent);
 }
 tr.off .who,
-tr.off td { color: #7eb4cc; }
+tr.off td { color: var(--desk-muted); }
 
 .state { color: #7dffc3; }
 tr.off .state { color: #f5c15a; }
 
 .link {
-  padding: 0 0 2px;
+  padding: 0;
   border: 0;
-  border-bottom: 1px dashed rgba(122, 212, 255, 0.7);
-  color: #9adfff;
-  letter-spacing: 0.08em;
+  color: var(--desk-accent);
 }
 
-tbody tr:hover td { background: rgba(58, 212, 255, 0.06); }
+tbody tr:hover td { background: rgba(109, 209, 250, 0.04); }
 
 .form {
   display: grid;

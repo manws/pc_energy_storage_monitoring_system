@@ -142,10 +142,9 @@ function toggle(id: MeterId, name: string) {
 .page {
   height: 100%;
   overflow: auto;
-  padding: 18px 22px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .meters {
@@ -156,18 +155,19 @@ function toggle(id: MeterId, name: string) {
 
 .card,
 .chart-card {
-  border: 1px solid rgba(90, 196, 255, 0.28);
-  background: #06182e;
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-surface);
 }
 
 .card {
   min-height: 168px;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
 }
 
-.card.is-alarm { border-color: rgba(255, 107, 107, 0.7); }
+.card.is-alarm { border-color: rgba(255, 107, 107, 0.55); }
 
 .card-top { display: flex; gap: 10px; align-items: center; }
 .mark {
@@ -175,11 +175,12 @@ function toggle(id: MeterId, name: string) {
   height: 32px;
   display: grid;
   place-items: center;
+  border-radius: 8px;
   color: var(--c);
   background: color-mix(in srgb, var(--c) 16%, transparent);
 }
-.name { font-weight: 600; }
-.sub, .p-label, .unit { color: #7eb4cc; font-size: 12px; }
+.name { font-weight: 600; color: var(--desk-text); }
+.sub, .p-label, .unit { color: var(--desk-muted); font-size: 12px; }
 .p-label { margin-top: 14px; }
 .p-row { display: flex; align-items: baseline; gap: 6px; }
 .p-val { font-size: 32px; line-height: 1.1; color: var(--c); }
@@ -191,24 +192,26 @@ function toggle(id: MeterId, name: string) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 14px 14px 8px;
+  padding: 16px 16px 10px;
+  overflow: hidden;
 }
 
 .chart-head, .legend, .tools { display: flex; align-items: center; }
 .chart-head { justify-content: space-between; }
-.chart-head h2 { margin: 0; font-size: 16px; letter-spacing: 0.08em; }
-.chart-head p { margin: 4px 0 0; color: #7eb4cc; font-size: 12px; }
+.chart-head h2 { margin: 0; font-size: 15px; font-weight: 500; color: var(--desk-text); }
+.chart-head p { margin: 4px 0 0; color: var(--desk-dim); font-size: 12px; }
 .tools { gap: 8px; }
-.legend { gap: 8px; padding: 10px 0; flex-wrap: wrap; }
+.legend { gap: 8px; padding: 12px 0; flex-wrap: wrap; }
 .lg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(90, 196, 255, 0.28);
-  background: transparent;
-  color: #c5e6f5;
+  border: 1px solid var(--desk-line-strong);
+  border-radius: 6px;
+  background: var(--desk-deep);
+  color: var(--desk-text-2);
   font: inherit;
   cursor: pointer;
 }

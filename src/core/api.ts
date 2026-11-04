@@ -303,13 +303,13 @@ export const EmsApi = {
   currentEvent: (signal?: AbortSignal) =>
     apiPost<RawCurrentEventData>('/api/v1/Event/current', {}, signal),
 
-  eventPage: (body: { eventType?: number; eventDate?: string; pageIndex: number; pageSize: number }, signal?: AbortSignal) =>
+  eventPage: (body: { eventType: number; eventDate: string; pageIndex: number; pageSize: number }, signal?: AbortSignal) =>
     apiPost<RawEventPageData>('/api/v1/Event/pageList', body, signal),
 
   paramData: (workSpaceName: string, signal?: AbortSignal) =>
     apiPost<RawParamData>(`/api/v1/Param/paramData/${encodeURIComponent(workSpaceName)}`, {}, signal),
 
-  userPage: (body: { userCode?: string; userName?: string; pageIndex: number; pageSize: number }, signal?: AbortSignal) =>
+  userPage: (body: { userCode: string; userName: string; pageIndex: number; pageSize: number }, signal?: AbortSignal) =>
     apiPost<RawUserPageData>('/api/v1/User/pageList', body, signal),
 
   userSingle: (userId: number, signal?: AbortSignal) =>

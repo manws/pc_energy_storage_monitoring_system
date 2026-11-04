@@ -61,37 +61,40 @@ function setSize(e: Event) {
   align-items: center;
   gap: 6px;
   margin-right: 8px;
-  color: #9fd0e6;
+  color: var(--desk-muted);
   font-size: 13px;
 }
 
 .size select {
-  height: 32px;
+  height: 30px;
   padding: 0 26px 0 8px;
-  border: 1px solid rgba(90, 196, 255, 0.35);
-  background: rgba(6, 28, 52, 0.72) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%237ee7ff' d='M1 1l4 4 4-4'/%3E%3C/svg%3E") right 8px center no-repeat;
-  color: #e7f6ff;
+  border: 1px solid var(--desk-line-strong);
+  border-radius: 6px;
+  background: var(--desk-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236dd1fa' d='M1 1l4 4 4-4'/%3E%3C/svg%3E") right 8px center no-repeat;
+  color: var(--desk-text);
   font: inherit;
   appearance: none;
   cursor: pointer;
 }
 
 button {
-  min-width: 32px;
-  height: 32px;
+  min-width: 30px;
+  height: 30px;
   padding: 0 10px;
-  border: 1px solid rgba(90, 196, 255, 0.35);
-  background: rgba(6, 28, 52, 0.55);
-  color: #c5e6f5;
+  border: 1px solid var(--desk-line);
+  border-radius: 6px;
+  background: var(--desk-deep);
+  color: var(--desk-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
 }
 
 button.on {
-  color: #04101c;
-  background: #3ad4ff;
-  border-color: #7ee7ff;
+  color: #06101b;
+  background: var(--desk-accent);
+  border-color: var(--desk-accent);
+  font-weight: 600;
 }
 
 button:disabled {
