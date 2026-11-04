@@ -1,5 +1,20 @@
 export const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 
+/** WorkSpace0 / 0 → 工作单元0 */
+export function formatWorkspace(name: string | null | undefined): string {
+  if (!name) return '';
+  const m = /(?:WorkSpace)?(\d+)$/i.exec(name.trim());
+  return m ? `工作单元${m[1]}` : name;
+}
+
+export function isFaultStatus(status: string): boolean {
+  return status.includes('故障');
+}
+
+export function isWorkingStatus(status: string): boolean {
+  return status.includes('工作');
+}
+
 export const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 export const fmt = (v: unknown, d = 1): string => (isNum(v) ? v.toFixed(d) : '--');

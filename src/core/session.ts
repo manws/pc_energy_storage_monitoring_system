@@ -67,6 +67,11 @@ export function currentUser(): CurrentUser | null {
   return readSession()?.user ?? null;
 }
 
+/** 登录返回的 usergroupId：0 管理员，1 值班人员。 */
+export function isDutyUser(user: CurrentUser | null = currentUser()): boolean {
+  return user?.usergroupId === 1;
+}
+
 /** 当前 token，用于请求头 Authorization。 */
 export function authToken(): string {
   return readStored(TOKEN_KEY);

@@ -3,11 +3,12 @@ import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { EmsApi } from '@/core/api';
 import { clearSession, currentUser } from '@/core/session';
-import { deskMenus } from '@/router';
+import { menusFor } from '@/router';
 
 const route = useRoute();
 const router = useRouter();
 const user = computed(() => currentUser());
+const menus = computed(() => menusFor(user.value));
 const userName = computed(() => user.value?.userName || user.value?.userCode || '未登录');
 const userCode = computed(() => user.value?.userCode ?? '');
 const signingOut = ref(false);
@@ -39,7 +40,7 @@ async function signOut() {
         </button>
         <nav class="menus">
           <router-link
-            v-for="item in deskMenus"
+            v-for="item in menus"
             :key="item.name"
             class="menu"
             :class="{ 'is-on': route.name === item.name }"

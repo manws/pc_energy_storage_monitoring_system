@@ -10,14 +10,7 @@ import Sparkline from '@/components/base/Sparkline.vue';
 
 const { state, version } = useEnergy();
 const el = ref<HTMLElement | null>(null);
-const range = ref(15 * 60 * 1000);
 const hidden = ref<MeterId[]>([]);
-
-const RANGES = [
-  { label: '5分钟', v: 5 * 60 * 1000 },
-  { label: '15分钟', v: 15 * 60 * 1000 },
-  { label: '1小时', v: 60 * 60 * 1000 }
-];
 
 const hexA = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
@@ -88,21 +81,17 @@ const chart = useChart(el, (c) => {
 function render() {
   const c = chart.value;
   if (!c) return;
-  const now = state.value.ts;
-  const from = now - range.value;
+  const series = METERS.map((m) => ({ data: state.value.history[m.id] }));
+  const first = state.value.history.grid;
+  const min = first.length ? first[0][0] : undefined;
+  const max = first.length ? first[first.length - 1][0] : undefined;
   c.setOption({
-    xAxis: { min: from, max: now },
-    series: METERS.map((m) => {
-      const h = state.value.history[m.id];
-      let i = h.length - Math.ceil(range.value / 2000) - 2;
-      if (i < 0) i = 0;
-      return { data: h.slice(i) };
-    })
+    xAxis: { min, max },
+    series
   });
 }
 
 watch(version, render);
-watch(range, render);
 
 function toggle(id: MeterId, name: string) {
   hidden.value = hidden.value.includes(id) ? hidden.value.filter((x) => x !== id) : [...hidden.value, id];
@@ -137,9 +126,6 @@ function toggle(id: MeterId, name: string) {
         <div>
           <h2>有功功率实时波形</h2>
           <p>五路电表同一时刻对照</p>
-        </div>
-        <div class="tools">
-          <button v-for="r in RANGES" :key="r.v" type="button" class="chip" :class="{ 'is-active': range === r.v }" @click="range = r.v">{{ r.label }}</button>
         </div>
       </header>
       <div class="legend">

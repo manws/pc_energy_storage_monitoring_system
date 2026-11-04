@@ -1,16 +1,16 @@
 // 将后端接口原始响应映射为前端统一的 EnergyState。
 // 设计原则：
-// 1. 以接口真实数据为准；接口未提供的字段给出安全默认值（0 / 空数组 / 非激活），
-//    依赖前端各组件已有的降级逻辑（cells 为空则隐藏 BMS 栏 / 显示整包等）。
+// 1. 以接口真实数据为准；接口未提供的字段给出安全默认值（0 / 空数组 / 非激活）。
 // 2. state.ts 取数据最新时间戳（而非当前时间），确保历史曲线落在可视窗口内。
 
 import type {
   RawBigScreen, RawChannelData, RawCurrentEventData, RawDeviceData, RawMeterData, RawParamData
 } from './api';
 import type {
-  AlarmItem, AlarmLevel, BmsData, CabPhase, EnergyState, HistoryPoint, MeterId, MeterReading, PcsChannel
+  AlarmItem, AlarmKind, AlarmLevel, BmsData, CabPhase, EnergyState, HistoryPoint, MeterId, MeterReading, PcsChannel
 } from './types';
 import type { BmsCfg, MeterCfg, ProtocolRow, WorkspaceCfg } from './workspaceConfig';
+import { formatWorkspace } from './utils';
 
 /** 把可能是字符串/空串的数值安全转为 number；空或非法返回 fallback。 */
 export function num(v: unknown, fallback = 0): number {
@@ -66,20 +66,35 @@ function signed(v: number, dir: PowerDir): number {
   return v;
 }
 
-function statusOf(raw: RawChannelData): PcsChannel['status'] {
-  const n = raw.nCurrentState;
-  const name = raw.CurrentStateName || '';
-  if (n === 2 || name.includes('工作')) return '运行';
-  if (name.includes('故障') || (raw.DCDCErr && raw.DCDCErr.trim() !== '')) return '故障';
-  return '待机';
+/** 文档枚举：优先 CurrentStateName，缺省按 nCurrentState 回退。 */
+const CHANNEL_STATE: Record<number, string> = {
+  0x00: '待机中',
+  0x01: '启动过程中',
+  0x02: '工作中',
+  0x03: '停机过程中',
+  0x04: '外部禁止运行',
+  0xFF: '故障中'
+};
+
+function statusOf(raw: RawChannelData): string {
+  const name = (raw.CurrentStateName || '').trim();
+  if (name) return name;
+  return CHANNEL_STATE[raw.nCurrentState] || '未知';
 }
 
-function channelOf(raw: RawChannelData, no: number): PcsChannel {
+function channelOf(
+  raw: RawChannelData,
+  no: number,
+  extra?: { channelId?: string; workspace?: string; bmsRaw?: Record<string, unknown> | null }
+): PcsChannel {
   // 方向以工步名为准，功率符号按前端约定归一化（放电为负）。
   const power = signed(num(raw.WorkKW), dirOf(raw.StepName || ''));
   const dcErr = (raw.DCDCErr || '').trim();
+  const mode = (raw.WorkModel || '').trim();
   return {
     no,
+    channelId: extra?.channelId ?? '',
+    workspace: extra?.workspace ?? '',
     time: raw.TimeValue || '--',
     voltage: num(raw.Vol),
     current: num(raw.Cur),
@@ -90,18 +105,34 @@ function channelOf(raw: RawChannelData, no: number): PcsChannel {
     disWh: num(raw.DischargeWH),
     step: raw.StepName || '--',
     status: statusOf(raw),
-    mode: raw.WorkModel || raw.StepName || '--',
+    mode,
     fault: '无',
     pwmFault: '无',
-    dcdcFault: dcErr || '无'
+    dcdcFault: dcErr || '无',
+    bmsRaw: extra?.bmsRaw ?? null
   };
 }
 
 export function emptyChannel(no: number): PcsChannel {
   return {
-    no, time: '--', voltage: 0, current: 0, power: 0,
-    chgAh: 0, disAh: 0, chgWh: 0, disWh: 0,
-    step: '--', status: '待机', mode: '--', fault: '无', pwmFault: '无', dcdcFault: '无'
+    no,
+    channelId: '',
+    workspace: '',
+    time: '--',
+    voltage: 0,
+    current: 0,
+    power: 0,
+    chgAh: 0,
+    disAh: 0,
+    chgWh: 0,
+    disWh: 0,
+    step: '--',
+    status: '待机中',
+    mode: '',
+    fault: '无',
+    pwmFault: '无',
+    dcdcFault: '无',
+    bmsRaw: null
   };
 }
 
@@ -134,17 +165,17 @@ function buildHistory(values: number[] | undefined, times: number[]): HistoryPoi
   const base = times.length ? times : [];
   const end = base.length ? base[base.length - 1] : Date.now();
   for (let i = 0; i < n; i++) {
-    const ts = base.length === n ? base[i] : end - (n - 1 - i) * 2000;
+    const ts = base.length === n ? base[i] : end - (n - 1 - i) * 5000;
     out.push([ts, Math.round(values[i] * 100) / 100]);
   }
   return out;
 }
 
 export interface RealtimeBundle {
-  device: RawDeviceData;
-  meter: RawMeterData;
-  bigScreen: RawBigScreen;
-  current: RawCurrentEventData;
+  device?: RawDeviceData;
+  meter?: RawMeterData;
+  bigScreen?: RawBigScreen;
+  current?: RawCurrentEventData;
 }
 
 /** 将 Param 接口响应映射为配置页使用的 WorkspaceCfg。 */
@@ -245,83 +276,61 @@ export function mapParamToWorkspace(raw: RawParamData, id: string): WorkspaceCfg
   };
 }
 
-function alarmLevelOf(e: RawCurrentEventData['eventList'][number]): AlarmLevel {
-  const msg = e.EventMsg || '';
+function alarmLevelOf(msg: string, isAlarm: boolean): AlarmLevel {
   if (msg.includes('逆流') && !msg.includes('解除')) return 'danger';
   if (msg.includes('解除') || msg.includes('恢复') || msg.includes('正常') || msg.includes('通过')) return 'success';
-  if (e.EventType === 1) return 'warning';
+  if (isAlarm) return 'warning';
   return 'info';
 }
 
-function mapAlarms(current: RawCurrentEventData): { alarms: AlarmItem[] } {
-  const list = current.eventList ?? [];
-  // 事件时间倒序（最新在前），与前端告警栏期望一致。
-  const sorted = [...list].sort((a, b) => parseTime(b.EventTime) - parseTime(a.EventTime));
-  const alarms: AlarmItem[] = sorted.map((e, i) => ({
-    id: i + 1,
-    ts: parseTime(e.EventTime),
-    level: alarmLevelOf(e),
-    source: e.ChannelId ? `通道${e.ChannelId}` : '系统',
-    msg: e.EventMsg || ''
-  }));
-  return { alarms };
+function kindOf(code: number, name?: string): AlarmKind {
+  if (code === 1 || name === '告警' || name === '报警') return '告警';
+  return '事件';
 }
 
-/** 主映射：接口数据 → EnergyState */
-export function mapToEnergyState(b: RealtimeBundle, prev?: EnergyState): EnergyState {
-  const bs = b.bigScreen.bigScreen;
-  const devices = b.device.deviceList ?? [];
-  const times = (devices[0]?.TimeList ?? []).map(parseTime).filter((t) => t > 0);
+function mapEventList(list: RawBigScreen['bigScreen']['EventList'] | null | undefined): AlarmItem[] {
+  const items = list ?? [];
+  return [...items]
+    .sort((a, b) => parseTime(b.eventTime) - parseTime(a.eventTime))
+    .map((e, i) => {
+      const kind = kindOf(e.eventTypeCode, e.eventTypeName);
+      return {
+        id: i + 1,
+        ts: parseTime(e.eventTime),
+        level: alarmLevelOf(e.eventMsg || '', kind === '告警'),
+        kind,
+        workspace: formatWorkspace(e.workSpaceName),
+        source: e.channelId ? `通道${e.channelId}` : '系统',
+        msg: e.eventMsg || e.eventName || ''
+      };
+    });
+}
 
-  // 以数据最新时间戳为基准（无则退回当前时间）
-  const latest = devices[0]?.ChannelData?.TimeValue
-    ? parseTime(devices[0].ChannelData.TimeValue)
-    : (times.length ? times[times.length - 1] : Date.now());
+function keepBackflow(prev: EnergyState | undefined, active: boolean) {
+  return {
+    active,
+    since: prev?.backflow.since ?? 0,
+    count: prev?.backflow.count ?? 0,
+    totalSec: prev?.backflow.totalSec ?? 0,
+    peak: prev?.backflow.peak ?? 0,
+    lastAt: prev?.backflow.lastAt ?? 0,
+    acked: prev?.backflow.acked ?? false
+  };
+}
+
+const phaseOf = (p: number): CabPhase => (p > 0.5 ? 'chg' : p < -0.5 ? 'dis' : 'rest');
+
+/** 大屏：只消费 bigScreen。 */
+export function mapBigScreen(raw: RawBigScreen, prev?: EnergyState): EnergyState {
+  const bs = raw.bigScreen;
+  const channels = bs.ChannelDataList ?? [];
+  const latest = channels[0]?.TimeValue ? parseTime(channels[0].TimeValue) : 0;
   const ts = latest || Date.now();
-
-  // 电表瞬时读数（大屏对象）
-  const meters: Record<MeterId, MeterReading> = {
-    grid: readingOf(bs.MeterCity),
-    ess: readingOf(bs.MeterEg),
-    cab1: readingOf(bs.MeterCabinet1),
-    cab2: readingOf(bs.MeterCabinet2),
-    cab3: readingOf(bs.MeterCabinet3)
-  };
-
-  // 历史功率曲线（电表接口 720 点）
-  const m = b.meter.meter;
-  const history: Record<MeterId, HistoryPoint[]> = {
-    grid: buildHistory(m?.PsCityList, times),
-    ess: buildHistory(m?.PsDeviceList, times),
-    cab1: buildHistory(m?.PsCabinet1List, times),
-    cab2: buildHistory(m?.PsCabinet2List, times),
-    cab3: buildHistory(m?.PsCabinet3List, times)
-  };
-
-  // PCS 通道（优先设备接口，缺省回退大屏 ChannelDataList）
-  const chSource: RawChannelData[] = devices.length
-    ? devices.map((d) => d.ChannelData)
-    : (bs.ChannelDataList ?? []);
-  const pcs: [PcsChannel, PcsChannel] = [
-    chSource[0] ? channelOf(chSource[0], 1) : emptyChannel(1),
-    chSource[1] ? channelOf(chSource[1], 2) : emptyChannel(2)
-  ];
-
-  // PCS 功率历史（设备接口 PowerList）
-  const pcsHistory: [HistoryPoint[], HistoryPoint[]] = [
-    buildHistory(devices[0]?.PowerList, times),
-    buildHistory(devices[1]?.PowerList, times)
-  ];
-
-  // BMS（接口字段多为空，cells/temps 不提供）
-  const bms = bmsOf(devices[0]?.BMSData);
-
-  // 功率总览
-  // 储能总功率方向与首通道工步保持一致（通道已按工步归一化为放电为负）。
-  const essDir = dirOf(
-    devices[0]?.ChannelData?.StepName || bs.ChannelDataList?.[0]?.StepName || ''
-  );
-  const essP = pcs[0].power + pcs[1].power;
+  const pcs = channels.length
+    ? channels.map((ch, i) => channelOf(ch, i + 1))
+    : [emptyChannel(1), emptyChannel(2)];
+  const essDir = dirOf(channels[0]?.StepName || '');
+  const essP = pcs.reduce((sum, ch) => sum + ch.power, 0);
   const power = {
     base: 0,
     grid: num(bs.PsCity),
@@ -330,42 +339,105 @@ export function mapToEnergyState(b: RealtimeBundle, prev?: EnergyState): EnergyS
     cab2: num(bs.MeterCabinet2?.Ps),
     cab3: num(bs.MeterCabinet3?.Ps)
   };
-
-  // 配电柜工况（由功率正负推断）
-  const phase = (p: number): CabPhase => (p > 0.5 ? 'chg' : p < -0.5 ? 'dis' : 'rest');
-
-  const { alarms } = mapAlarms(b.current);
-
   return {
     ts,
     power,
-    meters,
-    history,
-    pcsHistory,
+    meters: {
+      grid: readingOf(bs.MeterCity),
+      ess: readingOf(bs.MeterEg),
+      cab1: readingOf(bs.MeterCabinet1),
+      cab2: readingOf(bs.MeterCabinet2),
+      cab3: readingOf(bs.MeterCabinet3)
+    },
+    history: prev?.history ?? { grid: [], ess: [], cab1: [], cab2: [], cab3: [] },
+    pcsHistory: prev?.pcsHistory ?? [[], []],
     socHistory: (bs.SOCList ?? []).map((v) => num(v)),
     pcs,
-    bms,
-    cabPhase: { cab1: phase(power.cab1), cab2: phase(power.cab2), cab3: phase(power.cab3) },
+    bms: prev?.bms ?? bmsOf(undefined),
+    cabPhase: { cab1: phaseOf(power.cab1), cab2: phaseOf(power.cab2), cab3: phaseOf(power.cab3) },
     essLimited: false,
-    essStep: num(devices[0]?.ChannelData?.nStepCode, 1) || 1,
+    essStep: num(channels[0]?.nStepCode, 1) || 1,
     energy: {
-      // 接口仅提供“节省电量”总量，映射到储能放电计量；其余无对应，置 0
       grid: { imp: 0, exp: 0 },
       ess: { imp: 0, exp: num(bs.SavePower) },
       cab1: { imp: 0, exp: 0 },
       cab2: { imp: 0, exp: 0 },
       cab3: { imp: 0, exp: 0 }
     },
-    backflow: {
-      active: power.grid < 0,
-      since: prev?.backflow.since ?? 0,
-      count: prev?.backflow.count ?? 0,
-      totalSec: prev?.backflow.totalSec ?? 0,
-      peak: prev?.backflow.peak ?? 0,
-      lastAt: prev?.backflow.lastAt ?? 0,
-      acked: prev?.backflow.acked ?? false
-    },
-    alarms,
+    backflow: keepBackflow(prev, power.grid < 0),
+    alarms: mapEventList(bs.EventList),
     alarmCountToday: num(bs.AlarmCount)
   };
+}
+
+function lastOf(list: number[] | undefined, fallback = 0): number {
+  if (!list?.length) return fallback;
+  return num(list[list.length - 1], fallback);
+}
+
+/** 电表页：只消费 meterData。曲线无时间轴，按 5s 回推（与设备 TimeList 间隔一致）。 */
+export function mapMeter(raw: RawMeterData, prev?: EnergyState): EnergyState {
+  const m = raw.meter;
+  const times: number[] = [];
+  const base = prev ?? mapBigScreen({ bigScreen: {} as RawBigScreen['bigScreen'] });
+  const history: Record<MeterId, HistoryPoint[]> = {
+    grid: buildHistory(m?.PsCityList, times),
+    ess: buildHistory(m?.PsDeviceList, times),
+    cab1: buildHistory(m?.PsCabinet1List, times),
+    cab2: buildHistory(m?.PsCabinet2List, times),
+    cab3: buildHistory(m?.PsCabinet3List, times)
+  };
+  const ps = {
+    grid: lastOf(m?.PsCityList, num(m?.PsCity)),
+    ess: lastOf(m?.PsDeviceList, num(m?.PsDevice)),
+    cab1: lastOf(m?.PsCabinet1List, num(m?.PsCabinet1)),
+    cab2: lastOf(m?.PsCabinet2List, num(m?.PsCabinet2)),
+    cab3: lastOf(m?.PsCabinet3List, num(m?.PsCabinet3))
+  };
+  const meters = { ...base.meters };
+  (Object.keys(ps) as MeterId[]).forEach((id) => {
+    meters[id] = { ...meters[id], ps: ps[id] };
+  });
+  const ts = history.grid.length ? history.grid[history.grid.length - 1][0] : Date.now();
+  return {
+    ...base,
+    ts,
+    meters,
+    history,
+    power: { ...base.power, ...ps },
+    backflow: keepBackflow(prev, ps.grid < 0)
+  };
+}
+
+/** 储能监控：只消费 deviceData。 */
+export function mapDevice(raw: RawDeviceData, prev?: EnergyState): EnergyState {
+  const devices = raw.deviceList ?? [];
+  const times = (devices[0]?.TimeList ?? []).map(parseTime).filter((t) => t > 0);
+  const latest = devices[0]?.ChannelData?.TimeValue
+    ? parseTime(devices[0].ChannelData.TimeValue)
+    : (times.length ? times[times.length - 1] : Date.now());
+  const pcs = devices.length
+    ? devices.map((d, i) => channelOf(d.ChannelData, (d.Index ?? i) + 1, {
+      channelId: d.ChannelId || '',
+      workspace: d.WorkSpaceName || '',
+      bmsRaw: d.BMSData ? { ...d.BMSData } : null
+    }))
+    : [emptyChannel(1), emptyChannel(2)];
+  const pcsHistory = devices.map((d) => buildHistory(d.PowerList, times));
+  const base = prev ?? mapBigScreen({ bigScreen: {} as RawBigScreen['bigScreen'] });
+  return {
+    ...base,
+    ts: latest || Date.now(),
+    pcs,
+    pcsHistory,
+    bms: bmsOf(devices[0]?.BMSData)
+  };
+}
+
+/** 兼容旧入口：按已提供的接口拼装。 */
+export function mapToEnergyState(b: RealtimeBundle, prev?: EnergyState): EnergyState {
+  if (b.bigScreen) return mapBigScreen(b.bigScreen, prev);
+  if (b.meter) return mapMeter(b.meter, prev);
+  if (b.device) return mapDevice(b.device, prev);
+  return prev ?? mapBigScreen({ bigScreen: {} as RawBigScreen['bigScreen'] });
 }

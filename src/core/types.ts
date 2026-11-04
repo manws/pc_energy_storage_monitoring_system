@@ -24,8 +24,12 @@ export interface MeterReading {
 
 export type HistoryPoint = [number, number];
 
+export type PcsStatus = string;
+
 export interface PcsChannel {
   no: number;
+  channelId: string;
+  workspace: string;
   time: string;
   voltage: number;
   current: number;
@@ -35,14 +39,17 @@ export interface PcsChannel {
   chgWh: number;
   disWh: number;
   step: string;
-  status: '运行' | '待机' | '故障';
+  status: PcsStatus;
+  /** 接口 WorkModel；null/空串时页面不展示工作模式 */
   mode: string;
   fault: string;
   pwmFault: string;
   dcdcFault: string;
+  /** BMS 原始字段，详情里展示除 DataDict 外的全部项 */
+  bmsRaw: Record<string, unknown> | null;
 }
 
-export type PcsFieldKey = Exclude<keyof PcsChannel, 'no'>;
+export type PcsFieldKey = Exclude<keyof PcsChannel, 'no' | 'channelId' | 'workspace' | 'bmsRaw'>;
 
 export interface BmsData {
   soc: number;
@@ -79,10 +86,14 @@ export interface PcsFieldMeta {
   d?: number;
 }
 
+export type AlarmKind = '告警' | '事件';
+
 export interface AlarmItem {
   id: number;
   ts: number;
   level: AlarmLevel;
+  kind: AlarmKind;
+  workspace: string;
   source: string;
   msg: string;
 }
@@ -107,9 +118,9 @@ export interface EnergyState {
   power: Record<PowerKey, number>;
   meters: Record<MeterId, MeterReading>;
   history: Record<MeterId, HistoryPoint[]>;
-  pcsHistory: [HistoryPoint[], HistoryPoint[]];
+  pcsHistory: HistoryPoint[][];
   socHistory: number[];
-  pcs: [PcsChannel, PcsChannel];
+  pcs: PcsChannel[];
   bms: BmsData;
   cabPhase: Record<CabId, CabPhase>;
   essLimited: boolean;

@@ -124,11 +124,14 @@ const delay = computed(() => `${(Number(props.index) || 0) * 70}ms`);
 }
 
 .panel-sub {
+  min-width: 0;
+  overflow: hidden;
   font-size: 10px;
   color: #5d8eaa;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .panel-body {

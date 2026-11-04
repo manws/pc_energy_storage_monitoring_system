@@ -2,23 +2,52 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useEnergy } from '@/composables/useEnergy';
 import { ESS_REFRESH_MS } from '@/core/constants';
-import { fmt } from '@/core/utils';
-import type { BmsData, PcsChannel } from '@/core/types';
+import { fmt, isFaultStatus, isWorkingStatus } from '@/core/utils';
+import type { PcsChannel } from '@/core/types';
 import PcsPowerChart from '@/components/PcsPowerChart.vue';
 
 const { state } = useEnergy();
 const RANGE_MS = 15 * 60 * 1000;
 const PANEL_W = 420;
 const PANEL_H = 440;
-const WORKSPACE = 'WorkSpace0';
 
 interface Row { label: string; text: string; em?: boolean; cls?: string }
 
+const BMS_LABELS: Record<string, string> = {
+  TimeValue: '时间',
+  Vol: '电压',
+  Cur: '电流',
+  SOC: 'SOC',
+  MaxV: '最高单体',
+  MinV: '最低单体',
+  MaxVNo: '最高单体编号',
+  MinVNo: '最低单体编号',
+  MaxT: '最高温度',
+  MinT: '最低温度',
+  MaxTNo: '最高温度编号',
+  MinTNo: '最低温度编号',
+  Index: '索引'
+};
+
+const BMS_ORDER = ['TimeValue', 'Vol', 'Cur', 'SOC', 'MaxV', 'MinV', 'MaxVNo', 'MinVNo', 'MaxT', 'MinT', 'MaxTNo', 'MinTNo', 'Index'];
+
+function statusClsOf(status: string): string {
+  if (isFaultStatus(status)) return 'bad';
+  if (isWorkingStatus(status)) return 'ok';
+  return '';
+}
+
+function bmsText(v: unknown, d?: number): string {
+  if (v == null || v === '') return '--';
+  if (d == null) return String(v);
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(d) : String(v);
+}
+
 function pcsRows(ch: PcsChannel): Row[] {
-  const statusCls = ch.status === '运行' ? 'ok' : ch.status === '故障' ? 'bad' : '';
   const powerCls = ch.power > 0.5 ? 'pos' : ch.power < -0.5 ? 'neg' : '';
   const fault = (v: string) => (v === '无' ? 'ok' : 'bad');
-  return [
+  const rows: Row[] = [
     { label: '最新时间', text: ch.time || '--' },
     { label: '采样电压/V', text: fmt(ch.voltage, 1) },
     { label: '采样电流/A', text: fmt(ch.current, 1) },
@@ -28,30 +57,33 @@ function pcsRows(ch: PcsChannel): Row[] {
     { label: '充电瓦时/WH', text: fmt(ch.chgWh, 0) },
     { label: '放电瓦时/WH', text: fmt(ch.disWh, 0) },
     { label: '工步信息', text: ch.step || '--', em: true },
-    { label: '当前状态', text: ch.status, em: true, cls: statusCls },
-    { label: '工作模式', text: ch.mode || '--' },
+    { label: '当前状态', text: ch.status, em: true, cls: statusClsOf(ch.status) }
+  ];
+  if (ch.mode) rows.push({ label: '工作模式', text: ch.mode });
+  rows.push(
     { label: '故障信息', text: ch.fault, cls: fault(ch.fault) },
     { label: 'PWM故障信息', text: ch.pwmFault, cls: fault(ch.pwmFault) },
     { label: 'DCDC故障信息', text: ch.dcdcFault, cls: fault(ch.dcdcFault) }
-  ];
+  );
+  return rows;
 }
 
-function bmsRows(b: BmsData): Row[] {
-  const status = b.totalI > 1 ? '充电中' : b.totalI < -1 ? '放电中' : '静置';
-  return [
-    { label: '当前状态', text: status, em: true, cls: 'ok' },
-    { label: '总电压/V', text: fmt(b.totalV, 1) },
-    { label: '总电流/A', text: fmt(b.totalI, 1) },
-    { label: 'SOC/%', text: fmt(b.soc, 1), em: true },
-    { label: '最大单体/V', text: fmt(b.maxCellV, 3), em: true },
-    { label: '最大单体编号', text: `#${b.maxCellNo}` },
-    { label: '最小单体/V', text: fmt(b.minCellV, 3), em: true },
-    { label: '最小单体编号', text: `#${b.minCellNo}` },
-    { label: '最大温度/℃', text: fmt(b.maxT, 1) },
-    { label: '最大温度编号', text: `#${b.maxTNo}` },
-    { label: '最小温度/℃', text: fmt(b.minT, 1) },
-    { label: '最小温度编号', text: `#${b.minTNo}` }
-  ];
+function bmsRows(raw: Record<string, unknown> | null): Row[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  const rows: Row[] = [];
+  for (const key of BMS_ORDER) {
+    if (!(key in raw) || key === 'DataDict') continue;
+    seen.add(key);
+    rows.push({ label: BMS_LABELS[key] ?? key, text: bmsText(raw[key]) });
+  }
+  for (const key of Object.keys(raw)) {
+    if (key === 'DataDict' || seen.has(key)) continue;
+    const value = raw[key];
+    if (value && typeof value === 'object') continue;
+    rows.push({ label: BMS_LABELS[key] ?? key, text: bmsText(value) });
+  }
+  return rows;
 }
 
 function curveOf(index: number, now: number): [number, number][] {
@@ -70,35 +102,34 @@ function curveOf(index: number, now: number): [number, number][] {
 
 function capture() {
   const s = state.value;
-  const b = s.bms;
-  const hasBms = b.cells.length > 0;
-  const bms = hasBms ? bmsRows(b) : null;
-  const bmsStatus = b.totalI > 1 ? '充电中' : b.totalI < -1 ? '放电中' : '静置';
-  const bmsStatusCls = b.totalI > 1 ? 'pos' : b.totalI < -1 ? 'neg' : '';
-  return s.pcs.map((ch, i) => ({
-    no: ch.no,
-    workspace: WORKSPACE,
-    time: ch.time || '--',
-    status: ch.status,
-    statusCls: ch.status === '运行' ? 'ok' : ch.status === '故障' ? 'bad' : '',
-    power: fmt(ch.power, 2),
-    powerCls: ch.power > 0.5 ? 'pos' : ch.power < -0.5 ? 'neg' : '',
-    voltage: fmt(ch.voltage, 1),
-    current: fmt(ch.current, 1),
-    color: i === 0 ? '#3ad4ff' : '#7dffc3',
-    pcs: pcsRows(ch),
-    curve: curveOf(i, s.ts),
-    bms: bms && {
-      status: bmsStatus,
-      statusCls: bmsStatusCls,
-      soc: fmt(b.soc, 1),
-      maxCell: fmt(b.maxCellV, 3),
-      maxNo: b.maxCellNo,
-      minCell: fmt(b.minCellV, 3),
-      minNo: b.minCellNo,
-      rows: bms
-    }
-  }));
+  return s.pcs.map((ch, i) => {
+    const raw = ch.bmsRaw;
+    return {
+      no: ch.no,
+      channelId: ch.channelId,
+      channelText: ch.channelId ? `${ch.no}[${ch.channelId}]` : String(ch.no),
+      workspace: ch.workspace || 'WorkSpace0',
+      time: ch.time || '--',
+      status: ch.status,
+      statusCls: statusClsOf(ch.status),
+      power: fmt(ch.power, 2),
+      powerCls: ch.power > 0.5 ? 'pos' : ch.power < -0.5 ? 'neg' : '',
+      voltage: fmt(ch.voltage, 1),
+      current: fmt(ch.current, 1),
+      color: i === 0 ? '#3ad4ff' : '#7dffc3',
+      pcs: pcsRows(ch),
+      curve: curveOf(i, s.ts),
+      bms: {
+        time: bmsText(raw?.TimeValue),
+        voltage: bmsText(raw?.Vol, 1),
+        current: bmsText(raw?.Cur, 1),
+        soc: bmsText(raw?.SOC, 1),
+        maxCell: bmsText(raw?.MaxV, 3),
+        minCell: bmsText(raw?.MinV, 3),
+        rows: bmsRows(raw)
+      }
+    };
+  });
 }
 
 const cards = ref(capture());
@@ -108,7 +139,7 @@ const opened = computed(() => {
   if (!openKey.value) return null;
   const [no, kind] = openKey.value.split(':');
   const card = cards.value.find((c) => c.no === Number(no));
-  if (!card || (kind === 'bms' && !card.bms)) return null;
+  if (!card) return null;
   return {
     title: kind === 'bms' ? `通道 ${card.no} · 电池参数` : `通道 ${card.no} · 设备参数`,
     color: card.color,
@@ -172,7 +203,6 @@ onBeforeUnmount(() => {
       v-for="card in cards"
       :key="card.no"
       class="chassis"
-      :class="{ 'no-bms': !card.bms }"
       :style="{ '--accent': card.color }"
     >
       <header class="rail">
@@ -183,7 +213,7 @@ onBeforeUnmount(() => {
         <i class="sep" />
         <p class="mark channel">
           <em>通道</em>
-          <strong class="num">{{ card.no }}</strong>
+          <strong class="num">{{ card.channelText }}</strong>
         </p>
       </header>
 
@@ -210,7 +240,7 @@ onBeforeUnmount(() => {
           <time class="num">{{ card.time }}</time>
         </section>
 
-        <section v-if="card.bms" class="bay">
+        <section class="bay">
           <header>
             <b>BMS信息</b>
             <button
@@ -223,13 +253,14 @@ onBeforeUnmount(() => {
               @blur="scheduleClose"
             >详情</button>
           </header>
-          <p class="state" :class="card.bms.statusCls">{{ card.bms.status }}</p>
+          <p class="state">{{ card.bms.time }}</p>
           <dl class="facts">
+            <div><dt>电压</dt><dd class="num">{{ card.bms.voltage }}<i>V</i></dd></div>
+            <div><dt>电流</dt><dd class="num">{{ card.bms.current }}<i>A</i></dd></div>
             <div><dt>SOC</dt><dd class="num">{{ card.bms.soc }}<i>%</i></dd></div>
-            <div><dt>最大单体</dt><dd class="num">{{ card.bms.maxCell }}<i>V #{{ card.bms.maxNo }}</i></dd></div>
-            <div><dt>最小单体</dt><dd class="num">{{ card.bms.minCell }}<i>V #{{ card.bms.minNo }}</i></dd></div>
+            <div><dt>最高单体</dt><dd class="num">{{ card.bms.maxCell }}<i>V</i></dd></div>
+            <div><dt>最低单体</dt><dd class="num">{{ card.bms.minCell }}<i>V</i></dd></div>
           </dl>
-          <time class="num">{{ card.time }}</time>
         </section>
 
         <section class="bay plot">

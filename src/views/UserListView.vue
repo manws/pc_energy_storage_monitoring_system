@@ -24,11 +24,23 @@ interface UserForm {
   phone: string;
   email: string;
   password: string;
+  passwordConfirm: string;
   active: boolean;
   groupId: number;
 }
 
-const ROLE = '监控人员';
+const ROLE_OPTIONS = [
+  { id: 0, label: '管理员' },
+  { id: 1, label: '值班人员' }
+] as const;
+
+function roleOf(groupId: number): string {
+  return ROLE_OPTIONS.find((item) => item.id === groupId)?.label ?? '值班人员';
+}
+
+function groupIdOf(groupId: number): number {
+  return groupId === 0 ? 0 : 1;
+}
 const pageSize = ref(50);
 type ActiveFilter = 'all' | 'on' | 'off';
 
@@ -51,7 +63,7 @@ function rowOf(u: RawUser): UserRow {
     login: u.userCode,
     phone: u.phone ?? '',
     email: u.email ?? '',
-    role: ROLE,
+    role: roleOf(u.usergroupId ?? 1),
     active: u.enabled === 1,
     updatedAt: (u.updateOn ?? '').slice(0, 10),
     updatedBy: u.updateBy ?? '',
@@ -91,7 +103,7 @@ watch([keyword, activeFilter], () => { page.value = 1; });
 watch(pages, (n) => { if (page.value > n) page.value = n; });
 
 function blank(): UserForm {
-  return { id: null, name: '', login: '', phone: '', email: '', password: '', active: true, groupId: 1 };
+  return { id: null, name: '', login: '', phone: '', email: '', password: '', passwordConfirm: '', active: true, groupId: 1 };
 }
 
 function create() {
@@ -108,8 +120,9 @@ function edit(row: UserRow) {
     phone: row.phone,
     email: row.email,
     password: '',
+    passwordConfirm: '',
     active: row.active,
-    groupId: row.groupId
+    groupId: groupIdOf(row.groupId)
   });
   error.value = '';
   open.value = true;
@@ -136,9 +149,17 @@ async function save() {
     error.value = '邮箱格式不正确';
     return;
   }
-  if (form.id == null && !form.password.trim()) {
-    error.value = '新增用户需要设置初始密码';
-    return;
+  const password = form.password.trim();
+  const passwordConfirm = form.passwordConfirm.trim();
+  if (form.id == null || password || passwordConfirm) {
+    if (!password) {
+      error.value = '请输入密码';
+      return;
+    }
+    if (password !== passwordConfirm) {
+      error.value = '两次输入的密码不一致';
+      return;
+    }
   }
   const duplicated = users.value.some((item) => item.login === login && item.id !== form.id);
   if (duplicated) {
@@ -154,7 +175,7 @@ async function save() {
     email,
     enabled: form.active ? 1 : 0
   };
-  if (form.password.trim()) payload.userPwd = form.password.trim();
+  if (password) payload.userPwd = password;
 
   saving.value = true;
   error.value = '';
@@ -193,6 +214,7 @@ async function save() {
       <table v-if="shown.length">
         <thead>
           <tr>
+            <th class="idx">序号</th>
             <th>登录名称</th>
             <th>姓名</th>
             <th>手机号</th>
@@ -201,16 +223,17 @@ async function save() {
             <th>是否激活</th>
             <th>更新人员</th>
             <th>更新日期</th>
-            <th></th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in shown" :key="row.id" :class="{ off: !row.active }">
+          <tr v-for="(row, index) in shown" :key="row.id" :class="{ off: !row.active }">
+            <td class="num idx">{{ (page - 1) * pageSize + index + 1 }}</td>
             <td class="num">{{ row.login }}</td>
             <td class="who">{{ row.name }}</td>
             <td class="num">{{ row.phone }}</td>
             <td>{{ row.email }}</td>
-            <td class="role-col">{{ row.role }}</td>
+            <td><span class="role" :class="{ admin: row.groupId === 0 }">{{ row.role }}</span></td>
             <td><span class="state" :class="{ off: !row.active }">{{ row.active ? '是' : '否' }}</span></td>
             <td>{{ row.updatedBy }}</td>
             <td class="num time">{{ row.updatedAt }}</td>
@@ -230,19 +253,24 @@ async function save() {
     <el-dialog
       v-model="open"
       :title="form.id == null ? '新增用户' : '编辑用户'"
-      width="440px"
+      width="480px"
       align-center
       :append-to-body="false"
       @closed="error = ''"
     >
       <form class="form" @submit.prevent="save">
         <label>登录名称<el-input v-model="form.login" class="desk-field" maxlength="20" :disabled="form.id != null" /></label>
-        <label>姓名<el-input v-model="form.name" class="desk-field" maxlength="20" /></label>
-        <label>{{ form.id == null ? '初始密码' : '重置密码' }}<el-input v-model="form.password" class="desk-field" type="password" maxlength="40" show-password :placeholder="form.id == null ? '请输入初始密码' : '留空则不修改'" /></label>
+        <label>姓名<el-input v-model="form.name" class="desk-field" maxlength="20" :disabled="form.id != null" /></label>
         <label>手机号<el-input v-model="form.phone" class="desk-field" maxlength="11" /></label>
         <label>邮箱<el-input v-model="form.email" class="desk-field" maxlength="40" /></label>
-        <p class="role"><span>权限</span><b>{{ ROLE }}</b></p>
+        <label>权限
+          <el-select v-model="form.groupId" class="desk-field" popper-class="desk-select">
+            <el-option v-for="item in ROLE_OPTIONS" :key="item.id" :label="item.label" :value="item.id" />
+          </el-select>
+        </label>
         <label class="check">是否激活<el-checkbox v-model="form.active" /></label>
+        <label>密码<el-input v-model="form.password" class="desk-field" type="password" maxlength="40" show-password :placeholder="form.id == null ? '请输入密码' : '留空则不修改'" /></label>
+        <label>确认密码<el-input v-model="form.passwordConfirm" class="desk-field" type="password" maxlength="40" show-password :placeholder="form.id == null ? '请再次输入密码' : '留空则不修改'" /></label>
         <p v-if="error" class="error">{{ error }}</p>
       </form>
       <template #footer>
@@ -367,14 +395,30 @@ th {
   top: 0;
   color: #7eb4cc;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  background: #06182e;
+  letter-spacing: 0.12em;
+  background: #082038;
+  box-shadow: inset 0 -1px 0 rgba(90, 196, 255, 0.28);
 }
 
 td { color: #d7eef8; }
+.idx { width: 64px; color: #5d8eaa; }
 .who { font-weight: 600; color: #e7f6ff; }
-.role-col { color: #7eb4cc; }
 .time { color: #9fd0e6; }
+.role {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  color: #9fd0e6;
+  letter-spacing: 0.08em;
+  background: rgba(90, 196, 255, 0.08);
+  border: 1px solid rgba(90, 196, 255, 0.28);
+}
+.role.admin {
+  color: #04101c;
+  background: #3ad4ff;
+  border-color: #7ee7ff;
+}
 tr.off .who,
 tr.off td { color: #7eb4cc; }
 
@@ -405,22 +449,13 @@ tbody tr:hover td { background: rgba(58, 212, 255, 0.06); }
   font-size: 13px;
 }
 
+.form :deep(.el-select) { width: 100%; }
+
 .check {
   grid-template-columns: 80px auto;
   justify-content: start;
 }
 
-.role {
-  margin: 0;
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 10px;
-  align-items: center;
-  color: #9fd0e6;
-  font-size: 13px;
-}
-
-.role b { color: #e7f6ff; font-weight: 500; }
 .error { margin: 0; color: #ff8a8a; font-size: 13px; }
 
 </style>

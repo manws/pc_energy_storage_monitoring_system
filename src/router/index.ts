@@ -2,14 +2,14 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import HomeView from '@/views/HomeView.vue';
 import LoginView from '@/views/LoginView.vue';
 import EnergyLoginView from '@/views/EnergyLoginView.vue';
-import { startEnergyLoop, stopEnergyLoop } from '@/composables/useEnergy';
+import { setEnergyScope, stopEnergyLoop } from '@/composables/useEnergy';
 import DeskView from '@/views/DeskView.vue';
 import MeterDataView from '@/views/MeterDataView.vue';
 import DeviceInfoView from '@/views/DeviceInfoView.vue';
 import ConfigView from '@/views/ConfigView.vue';
 import AlarmListView from '@/views/AlarmListView.vue';
 import UserListView from '@/views/UserListView.vue';
-import { hasSession } from '@/core/session';
+import { currentUser, hasSession, isDutyUser } from '@/core/session';
 
 // true：旧版登录页；false：新版登录页。
 const USE_LEGACY_LOGIN: boolean = false;
@@ -34,6 +34,13 @@ const deskPages: DeskPage[] = [
 ];
 
 export const deskMenus: DeskMenu[] = deskPages.map(({ name, label, title }) => ({ name, label, title }));
+
+const DUTY_HIDDEN = new Set(['config', 'users']);
+
+export function menusFor(user: ReturnType<typeof currentUser>): DeskMenu[] {
+  if (!isDutyUser(user)) return deskMenus;
+  return deskMenus.filter((item) => !DUTY_HIDDEN.has(item.name));
+}
 
 const [entry, ...rest] = deskPages;
 
@@ -77,8 +84,17 @@ router.beforeEach((to) => {
 });
 
 router.afterEach((to) => {
-  if (to.name === 'login') stopEnergyLoop();
-  else startEnergyLoop();
+  if (to.name === 'login') {
+    stopEnergyLoop();
+    return;
+  }
+  const name = String(to.name ?? '');
+  setEnergyScope(
+    name === 'home' ? 'screen'
+      : name === 'meters' ? 'meter'
+        : name === 'devices' ? 'device'
+          : 'idle'
+  );
 });
 
 export default router;

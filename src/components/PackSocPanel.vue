@@ -4,26 +4,25 @@ import { useEnergy } from '@/composables/useEnergy';
 import { fmt } from '@/core/utils';
 import BasePanel from './base/BasePanel.vue';
 
-const PACK = 16;
 const { state } = useEnergy();
 
 const packs = computed(() => {
-  const cells = state.value.bms.cells;
-  if (!cells.length) return [{ name: '电池包', soc: state.value.bms.soc }];
-  const count = Math.ceil(cells.length / PACK);
-  return Array.from({ length: count }, (_, i) => {
-    const slice = cells.slice(i * PACK, (i + 1) * PACK);
-    const avg = slice.reduce((sum, v) => sum + v, 0) / slice.length;
-    const soc = Math.min(100, Math.max(0, ((avg - 3) / 0.65) * 100));
-    return { name: `${i + 1}`, soc };
-  });
+  const list = state.value.socHistory;
+  if (!list.length) return [];
+  return list.map((soc, i) => ({ name: `电池包${i + 1}`, soc }));
+});
+
+const range = computed(() => {
+  if (!packs.value.length) return { max: 0, min: 0 };
+  const values = packs.value.map((p) => p.soc);
+  return { max: Math.max(...values), min: Math.min(...values) };
 });
 </script>
 
 <template>
   <BasePanel title="储能电池 SOC" sub="Battery Packs" index="05">
     <template #extra>
-      <span class="text-[12px] text-slate-400">整包 {{ fmt(state.bms.soc, 1) }}%</span>
+      <span class="text-[12px] text-slate-400">最高 {{ fmt(range.max, 1) }}% · 最低 {{ fmt(range.min, 1) }}%</span>
     </template>
     <div class="chart">
       <div v-for="p in packs" :key="p.name" class="col">

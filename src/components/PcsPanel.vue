@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useEnergy } from '@/composables/useEnergy';
-import { fmt } from '@/core/utils';
+import { fmt, isFaultStatus, isWorkingStatus } from '@/core/utils';
 import BasePanel from './base/BasePanel.vue';
 
 const RANGE = 300;
@@ -9,37 +9,39 @@ const { state } = useEnergy();
 
 const channels = computed(() => state.value.pcs.map((ch) => {
   const power = ch.power;
+  const step = ch.step || '';
   return {
     no: ch.no,
     power,
     status: ch.status,
-    mode: ch.mode,
+    step,
     voltage: ch.voltage,
     current: ch.current,
     height: Math.min(100, (Math.abs(power) / RANGE) * 100),
     up: power >= 0,
-    modeCls: ch.mode.includes('放电') ? 'dis' : ch.mode.includes('充电') ? 'chg' : ch.mode.includes('限功率') ? 'limit' : 'rest'
+    modeCls: step.includes('放电') ? 'dis' : step.includes('充电') ? 'chg' : step.includes('限功率') ? 'limit' : 'rest',
+    statusCls: isFaultStatus(ch.status) ? 'bad' : isWorkingStatus(ch.status) ? 'ok' : ''
   };
 }));
 
-const anyFault = computed(() => state.value.pcs.some((c) => c.status === '故障'));
+const anyFault = computed(() => state.value.pcs.some((c) => isFaultStatus(c.status)));
 </script>
 
 <template>
-  <BasePanel title="储能设备运行" sub="量程 300 kW" index="03" :alarm="anyFault">
+  <BasePanel title="储能设备运行" sub="量程 300 kW · 单通道量程 300 kW" index="03" :alarm="anyFault">
     <div class="pcs">
-      <article v-for="ch in channels" :key="ch.no" class="card" :class="{ bad: ch.status === '故障' }">
+      <article v-for="ch in channels" :key="ch.no" class="card" :class="{ bad: ch.statusCls === 'bad' }">
         <div class="main">
           <div class="top">
             <span class="name">通道{{ ch.no }}</span>
-            <span class="st" :class="ch.status === '运行' ? 'ok' : ch.status === '故障' ? 'bad' : ''">{{ ch.status }}</span>
+            <span class="st" :class="ch.statusCls">{{ ch.status }}</span>
           </div>
           <div class="power">
             <span class="num">{{ fmt(ch.power, 2) }}</span>
             <span>kW</span>
           </div>
           <div class="meta">{{ fmt(ch.voltage, 1) }} V · {{ fmt(ch.current, 1) }} A</div>
-          <div class="mode" :class="ch.modeCls">{{ ch.mode }}</div>
+          <div class="mode" :class="ch.modeCls">{{ ch.step }}</div>
         </div>
         <div class="gauge">
           <span>300</span>
