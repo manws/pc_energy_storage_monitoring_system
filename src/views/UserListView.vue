@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { EmsApi } from '@/core/api';
-import type { RawUser } from '@/core/api';
+import type { BUserEditModel, RawUser } from '@/core/api';
 import { userGroupId } from '@/core/session';
 import ListPager from '@/components/ListPager.vue';
 
@@ -202,15 +202,16 @@ async function save() {
     return;
   }
 
-  const payload: Partial<RawUser> = {
+  const payload: BUserEditModel = {
+    userId: form.id ?? 0,
     usergroupId: form.groupId,
     userCode: login,
     userName: name,
+    userPwd: password,
     phone,
     email,
     enabled: form.active ? 1 : 0
   };
-  if (password) payload.userPwd = password;
 
   saving.value = true;
   error.value = '';
@@ -218,7 +219,7 @@ async function save() {
     if (form.id == null) {
       await EmsApi.userInsert(payload);
     } else {
-      await EmsApi.userUpdate(form.id, { ...payload, userId: form.id });
+      await EmsApi.userUpdate(form.id, payload);
     }
     close();
     await load();

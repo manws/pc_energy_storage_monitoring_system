@@ -202,6 +202,34 @@ export interface BLoginModel {
   sign: string;
 }
 
+/** 事件分页。文档还有 totalCount，请求侧不传。 */
+export interface BEventPageModel {
+  eventType: number;
+  eventDate: string;
+  pageIndex: number;
+  pageSize: number;
+}
+
+/** 用户分页。文档还有 totalCount，请求侧不传。 */
+export interface BUserPageModel {
+  userCode: string;
+  userName: string;
+  pageIndex: number;
+  pageSize: number;
+}
+
+/** 新增/更新用户。整份字段都带上；更新时 userPwd 空串表示不改密码。 */
+export interface BUserEditModel {
+  userId: number;
+  usergroupId: number;
+  userCode: string;
+  userName: string;
+  userPwd: string;
+  phone: string;
+  email: string;
+  enabled: number;
+}
+
 /** 登录返回的用户信息：字段与列表接口不同（userId 而非 id，且不带 enabled/userPwd，另有 token）。 */
 export interface RawLoginUser {
   userId: number;
@@ -303,21 +331,21 @@ export const EmsApi = {
   currentEvent: (signal?: AbortSignal) =>
     apiPost<RawCurrentEventData>('/api/v1/Event/current', {}, signal),
 
-  eventPage: (body: { eventType: number; eventDate: string; pageIndex: number; pageSize: number }, signal?: AbortSignal) =>
+  eventPage: (body: BEventPageModel, signal?: AbortSignal) =>
     apiPost<RawEventPageData>('/api/v1/Event/pageList', body, signal),
 
   paramData: (workSpaceName: string, signal?: AbortSignal) =>
     apiPost<RawParamData>(`/api/v1/Param/paramData/${encodeURIComponent(workSpaceName)}`, {}, signal),
 
-  userPage: (body: { userCode: string; userName: string; pageIndex: number; pageSize: number }, signal?: AbortSignal) =>
+  userPage: (body: BUserPageModel, signal?: AbortSignal) =>
     apiPost<RawUserPageData>('/api/v1/User/pageList', body, signal),
 
   userSingle: (userId: number, signal?: AbortSignal) =>
     apiPost<{ userInfo: RawUser }>(`/api/v1/User/single/${userId}`, {}, signal),
 
-  userInsert: (body: Partial<RawUser>, signal?: AbortSignal) =>
+  userInsert: (body: BUserEditModel, signal?: AbortSignal) =>
     apiPost<null>('/api/v1/User/insert', body, signal),
 
-  userUpdate: (userId: number, body: Partial<RawUser> & { userId?: number }, signal?: AbortSignal) =>
+  userUpdate: (userId: number, body: BUserEditModel, signal?: AbortSignal) =>
     apiPost<null>(`/api/v1/User/update/${userId}`, body, signal)
 };
